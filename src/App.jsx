@@ -11,18 +11,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<Calendar />} />
-          <Route path="/overview" element={<Overview />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+          <Route path="/" element={<Overview />} />
       </Routes>
     </BrowserRouter>
   )

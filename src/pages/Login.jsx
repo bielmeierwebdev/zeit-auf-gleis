@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
+import {
+  Box,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 import background from "../assets/background-picture.png";
 import logo from "../assets/ZeitAufGleis-Logo.png";
-import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -31,91 +37,124 @@ export default function Login() {
       return;
     }
 
-    // ✅ LOGIN ERFOLGREICH
     navigate("/");
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center"
-      style={{ backgroundImage: `url(${background})` }}
+    <Box
+      minHeight="100vh"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      sx={{
+        backgroundImage: `url(${background})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        position: "relative",
+      }}
     >
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/40" />
+      {/* Overlay */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+        }}
+      />
 
       {/* Login Card */}
-      <form
-        onSubmit={handleLogin}
-        className="
-          relative
-          w-full max-w-md
-          rounded-2xl
-          bg-black/60
-          backdrop-blur-xl
-          shadow-2xl
-          px-10 py-12
-          text-white
-        "
+      <Paper
+        elevation={10}
+        sx={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 420,
+          p: 5,
+          backdropFilter: "blur(12px)",
+          backgroundColor: "rgba(24,24,27,0)",
+        }}
       >
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-1 mb-10">
-          <img src={logo} alt="ZeitAufGleis Logo" className="h-45" />
-          <h1 className="text-3xl font-semibold">Einloggen</h1>
-        </div>
+        {/* Logo + Title */}
+        <Box textAlign="center" mb={4}>
+          <Box display="flex" justifyContent="center">
+            <img
+              src={logo}
+              alt="ZeitAufGleis Logo"
+              style={{
+                height: 180,
+                maxWidth: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
 
-        {/* Inputs */}
-        <div className="space-y-5">
-          <Input
+          <Typography variant="h5" fontWeight={600} sx={{ color: "white" }}>
+            Einloggen
+          </Typography>
+        </Box>
+
+        {/* Form */}
+        <Box component="form" onSubmit={handleLogin}>
+          <TextField
+            label="E-Mail-Adresse"
             type="email"
-            placeholder="E-Mail-Adresse"
+            fullWidth
+            sx={{
+              "& input": {
+                padding: "14px",
+                fontSize: "1rem",
+                color: "white",
+              },
+              "& input::placeholder": {
+                color: "rgba(255,255,255,0.5)",
+              },
+            }}
+            margin="normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="
-              bg-white/10
-              border-white/20
-              text-white
-              placeholder:text-white/60
-              focus:border-white/40
-            "
           />
 
-          <Input
+          <TextField
+            label="Passwort"
             type="password"
-            placeholder="Passwort"
+            fullWidth
+            margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="
-              bg-white/10
-              border-white/20
-              text-white
-              placeholder:text-white/60
-              focus:border-white/40
-            "
           />
-        </div>
 
-        {/* Error */}
-        {error && (
-          <p className="text-sm text-red-400 text-center mt-4">{error}</p>
-        )}
+          {error && (
+            <Typography color="error" variant="body2" align="center" mt={2}>
+              {error}
+            </Typography>
+          )}
 
-        {/* Button */}
-        <Button
-          type="submit"
-          className="w-full mt-8 text-lg"
-          disabled={loading}
-        >
-          {loading ? "Einloggen…" : "Einloggen"}
-        </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+            sx={{ mt: 4, bgcolor: "#1E4F8A" }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Einloggen"}
+          </Button>
+        </Box>
 
         {/* Footer */}
-        <p className="text-xs text-white/70 text-center mt-6">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          align="center"
+          display="block"
+          mt={3}
+        >
           Mit dem Einloggen stimmen Sie den Nutzungsbedingungen und der
           Datenschutzerklärung zu.
-        </p>
-      </form>
-    </div>
+        </Typography>
+      </Paper>
+    </Box>
   );
 }
