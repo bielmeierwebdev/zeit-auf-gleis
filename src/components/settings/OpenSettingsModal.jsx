@@ -17,6 +17,7 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
 
   const [openPassword, setOpenPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [soll, setSoll] = useState("");
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -32,10 +33,11 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, last_name")
+        .select("first_name, last_name, monthly_target_hours")
         .eq("id", user.id)
         .single();
 
+      setSoll(profile?.monthly_target_hours?.toString() || "160")
       setFirstName(profile?.first_name || "");
       setLastName(profile?.last_name || "");
     };
@@ -54,6 +56,7 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
         id: user.id,
         first_name: firstName,
         last_name: lastName,
+        monthly_target_hours: soll,
       });
 
     setLoading(false);
@@ -111,6 +114,13 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
               label="Nachname"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="Soll Stunden"
+              value={soll}
+              onChange={(e) => setSoll(e.target.value)}
               fullWidth
             />
 

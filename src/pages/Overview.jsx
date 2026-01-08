@@ -18,6 +18,7 @@ export default function Overview() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [monthSheets, setMonthSheets] = useState({});
   const [reloadKey, setReloadKey] = useState(0);
+  const [monthlyTarget, setMonthlyTarget] = useState(0);
 
   const reloadAll = () => {
     setReloadKey((k) => k + 1);
@@ -33,7 +34,7 @@ export default function Overview() {
   );
 
   // Soll (später aus DB)
-  const monthlyTarget = 160;
+  //const monthlyTarget = 160;
 
   // Heute
   const todaySheet = monthSheets[todayKey] ?? null;
@@ -44,6 +45,18 @@ export default function Overview() {
     } = await supabase.auth.getUser();
 
     if (!user) return;
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("monthly_target_hours")
+      .eq("id", user.id)
+      .single();
+
+      console.log(profile);
+
+    if (!profileError) {
+      setMonthlyTarget(Number(profile.monthly_target_hours || 0));
+    }
 
     const from = new Date(year, month, 1).toISOString().split("T")[0];
     const to = new Date(year, month + 1, 0).toISOString().split("T")[0];
