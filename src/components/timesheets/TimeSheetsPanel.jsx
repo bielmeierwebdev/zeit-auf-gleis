@@ -38,7 +38,18 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
 
       const { data, error } = await supabase
         .from("timesheets")
-        .select("id, date, total_hours, pdf_url, created_at")
+        .select(
+          `
+    id,
+    date,
+    total_hours,
+    pdf_url,
+    created_at,
+    timesheet_entries (
+      location
+    )
+  `
+        )
         .order("date", { ascending: false });
 
       console.log(data);
@@ -84,6 +95,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
     }
   };
 
+  const cacheBuster = selectedSheet?.updated_at
+    ? new Date(selectedSheet.updated_at).getTime()
+    : Date.now();
+
   return (
     <Box
       display="flex"
@@ -125,7 +140,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
               <TableRow>
                 <TableCell>Tag</TableCell>
                 <TableCell>Stunden</TableCell>
-                <TableCell>Erstellt</TableCell>
+                <TableCell>Ort</TableCell>
                 <TableCell align="right">Aktionen</TableCell>
               </TableRow>
             </TableHead>
@@ -144,7 +159,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
                   </TableCell>
                 </TableRow>
               )}
-
               {timeSheets.map((sheet) => (
                 <TableRow
                   key={sheet.id}
@@ -158,9 +172,9 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
                   </TableCell>
 
                   <TableCell>{sheet.total_hours.toFixed(2)} h</TableCell>
-
+                  {console.log(sheet)}
                   <TableCell>
-                    {new Date(sheet.created_at).toLocaleDateString("de-DE")}
+                    {sheet.timesheet_entries?.[0]?.location || "-"}
                   </TableCell>
 
                   {/* 👉 AKTIONEN */}
@@ -223,11 +237,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
               overflow="hidden"
             >
               <iframe
-                src={selectedSheet.pdf_url}
+                src={`${selectedSheet.pdf_url}?v=${cacheBuster}`}
                 width="100%"
                 height="100%"
                 style={{ border: "none" }}
-                title="Stundenzettel Vorschau"
               />
             </Box>
           ) : (
