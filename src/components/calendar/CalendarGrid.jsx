@@ -1,49 +1,62 @@
-import { useState } from "react"
-import {
-  Box,
-  IconButton,
-  Typography,
-  Paper,
-  Button,
-} from "@mui/material"
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft"
-import ChevronRightIcon from "@mui/icons-material/ChevronRight"
+import { useState } from "react";
+import { Box, IconButton, Typography, Paper, Button } from "@mui/material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 const MONTHS = [
-  "Januar","Februar","März","April","Mai","Juni",
-  "Juli","August","September","Oktober","November","Dezember"
-]
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+];
 
 function getISOWeek(date) {
-  const temp = new Date(date)
-  temp.setHours(0, 0, 0, 0)
-  temp.setDate(temp.getDate() + 3 - ((temp.getDay() + 6) % 7))
-  const week1 = new Date(temp.getFullYear(), 0, 4)
+  const temp = new Date(date);
+  temp.setHours(0, 0, 0, 0);
+  temp.setDate(temp.getDate() + 3 - ((temp.getDay() + 6) % 7));
+  const week1 = new Date(temp.getFullYear(), 0, 4);
   return (
     1 +
-    Math.round(
-      ((temp - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
-    )
-  )
+    Math.round(((temp - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
+  );
 }
 
-export default function CalendarGrid() {
-  const today = new Date()
-  const [month, setMonth] = useState(today.getMonth())
-  const [year, setYear] = useState(today.getFullYear())
+export default function CalendarGrid({ onSelectDate }) {
+  const today = new Date();
+  const [month, setMonth] = useState(today.getMonth());
+  const [year, setYear] = useState(today.getFullYear());
 
-  const firstDay = new Date(year, month, 1)
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const startDay = (firstDay.getDay() + 6) % 7
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startDay = (firstDay.getDay() + 6) % 7;
 
-  const totalCells = startDay + daysInMonth
-  const weeks = Math.ceil(totalCells / 7)
+  const totalCells = startDay + daysInMonth;
+  const weeks = Math.ceil(totalCells / 7);
 
   return (
     <Paper sx={{ p: 3, width: "100%" }}>
       {/* HEADER */}
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-        <IconButton onClick={() => month === 0 ? (setMonth(11), setYear(y => y - 1)) : setMonth(m => m - 1)}>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={3}
+      >
+        <IconButton
+          onClick={() =>
+            month === 0
+              ? (setMonth(11), setYear((y) => y - 1))
+              : setMonth((m) => m - 1)
+          }
+        >
           <ChevronLeftIcon />
         </IconButton>
 
@@ -51,7 +64,13 @@ export default function CalendarGrid() {
           {MONTHS[month]} {year}
         </Typography>
 
-        <IconButton onClick={() => month === 11 ? (setMonth(0), setYear(y => y + 1)) : setMonth(m => m + 1)}>
+        <IconButton
+          onClick={() =>
+            month === 11
+              ? (setMonth(0), setYear((y) => y + 1))
+              : setMonth((m) => m + 1)
+          }
+        >
           <ChevronRightIcon />
         </IconButton>
       </Box>
@@ -67,7 +86,7 @@ export default function CalendarGrid() {
           KW
         </Typography>
 
-        {["Mo","Di","Mi","Do","Fr","Sa","So"].map(d => (
+        {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((d) => (
           <Typography key={d} align="center" fontWeight={500}>
             {d}
           </Typography>
@@ -80,8 +99,8 @@ export default function CalendarGrid() {
           year,
           month,
           weekIndex * 7 - startDay + 1
-        )
-        const kw = getISOWeek(firstDayOfWeek)
+        );
+        const kw = getISOWeek(firstDayOfWeek);
 
         return (
           <Box
@@ -91,15 +110,19 @@ export default function CalendarGrid() {
             gap={1}
             mb={1}
           >
-            <Typography align="center" color="text.secondary" sx={{ lineHeight: "36px" }}>
+            <Typography
+              align="center"
+              color="text.secondary"
+              sx={{ lineHeight: "36px" }}
+            >
               {kw}
             </Typography>
 
             {Array.from({ length: 7 }).map((_, dayIndex) => {
-              const dayNumber = weekIndex * 7 + dayIndex - startDay + 1
+              const dayNumber = weekIndex * 7 + dayIndex - startDay + 1;
 
               if (dayNumber < 1 || dayNumber > daysInMonth) {
-                return <Box key={dayIndex} />
+                return <Box key={dayIndex} />;
               }
 
               return (
@@ -120,14 +143,15 @@ export default function CalendarGrid() {
                       borderColor: "#90caf9",
                     },
                   }}
+                  onClick={() => onSelectDate(new Date(year, month, dayNumber))}
                 >
                   {dayNumber}
                 </Button>
-              )
+              );
             })}
           </Box>
-        )
+        );
       })}
     </Paper>
-  )
+  );
 }

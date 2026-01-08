@@ -64,14 +64,15 @@ export default function Login() {
 
       {/* Login Card */}
       <Paper
-        elevation={10}
+        elevation={12}
         sx={{
           position: "relative",
           width: "100%",
           maxWidth: 420,
           p: 5,
+          borderRadius: 3,
+          backgroundColor: "rgba(255,255,255,0.92)", // 👈 KEY
           backdropFilter: "blur(12px)",
-          backgroundColor: "rgba(24,24,27,0)",
         }}
       >
         {/* Logo + Title */}
@@ -88,7 +89,7 @@ export default function Login() {
             />
           </Box>
 
-          <Typography variant="h5" fontWeight={600} sx={{ color: "white" }}>
+          <Typography variant="h5" fontWeight={600}>
             Einloggen
           </Typography>
         </Box>
@@ -99,14 +100,16 @@ export default function Login() {
             label="E-Mail-Adresse"
             type="email"
             fullWidth
-            sx={{
-              "& input": {
-                padding: "14px",
-                fontSize: "1rem",
-                color: "white",
+            InputLabelProps={{
+              sx: {
+                color: "#374151", // dunkelgrau
+                fontWeight: 500,
               },
-              "& input::placeholder": {
-                color: "rgba(255,255,255,0.5)",
+            }}
+            InputProps={{
+              sx: {
+                backgroundColor: "#ffffff",
+                borderRadius: 2,
               },
             }}
             margin="normal"
@@ -121,8 +124,25 @@ export default function Login() {
             fullWidth
             margin="normal"
             value={password}
+            InputLabelProps={{
+              sx: {
+                color: "#374151", // dunkelgrau
+                fontWeight: 500,
+              },
+            }}
+            InputProps={{
+              sx: {
+                backgroundColor: "#ffffff",
+                borderRadius: 2,
+              },
+            }}
             onChange={(e) => setPassword(e.target.value)}
             required
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleLogin(e);
+              }
+            }}
           />
 
           {error && (
