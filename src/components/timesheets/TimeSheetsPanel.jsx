@@ -20,6 +20,8 @@ import { supabase } from "../../lib/supabase";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import IconButton from "@mui/material/IconButton";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import Tooltip from "@mui/material/Tooltip";
 
 export default function TimeSheetsPanel({ openForDate, reloadKey }) {
@@ -83,7 +85,13 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
   };
 
   return (
-    <Box display="flex" height="100%" width="100%" gap={3}>
+    <Box
+      display="flex"
+      flexDirection={{ xs: "column", md: "row" }}
+      height="100%"
+      width="100%"
+      gap={3}
+    >
       {/* TABELLE */}
       <Paper
         sx={{
@@ -102,13 +110,13 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
         >
           <Typography variant="h6">Alle Stundenzettel</Typography>
 
-          <Button
-            variant="outlined"
-            color="success"
-            onClick={() => setShowPreview((p) => !p)}
+          <Tooltip
+            title={showPreview ? "Vorschau ausblenden" : "Vorschau einblenden"}
           >
-            {showPreview ? "Vorschau ausblenden" : "Vorschau einblenden"}
-          </Button>
+            <IconButton size="small" onClick={() => setShowPreview((p) => !p)}>
+              {showPreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
+            </IconButton>
+          </Tooltip>
         </Box>
 
         <Box flex={1} overflow="auto">
@@ -196,10 +204,11 @@ export default function TimeSheetsPanel({ openForDate, reloadKey }) {
         <Paper
           sx={{
             p: 3,
-            flex: "2 1 0%",
+            flex: { xs: "none", md: "2 1 0%" },
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
+            height: { xs: 400, md: "auto" },
           }}
         >
           <Typography variant="h6" gutterBottom>

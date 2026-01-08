@@ -52,7 +52,7 @@ export default function Overview() {
       .eq("id", user.id)
       .single();
 
-      console.log(profile);
+    console.log(profile);
 
     if (!profileError) {
       setMonthlyTarget(Number(profile.monthly_target_hours || 0));
@@ -103,43 +103,51 @@ export default function Overview() {
   };
 
   return (
-    <Box height="100vh" display="flex" flexDirection="column">
+    <Box
+      height="100vh"
+      display="flex"
+      flexDirection="column"
+      overflow={{ xs: "auto", md: "hidden" }}
+    >
       {/* TOP BAR */}
       <Box
         display="flex"
         alignItems="center"
         justifyContent="space-between"
-        px={3}
+        px={{ xs: 2, md: 3 }}
         py={1.5}
         borderBottom="1px solid #e5e7eb"
       >
+        {/* LOGO */}
         <Box display="flex" alignItems="center">
           <img
             src={logo}
             alt="ZeitAufGleis"
-            style={{ height: 40, objectFit: "contain", margin: -20 }}
+            style={{ height: 40, objectFit: "contain" }}
           />
         </Box>
 
-        <Box display="flex" alignItems="center">
+        {/* ACTIONS */}
+        <Box display="flex" alignItems="center" gap={1}>
           <Button
             variant="text"
             size="small"
-            startIcon={<SettingsIcon />}
             onClick={() => setSettingsOpen(true)}
+            startIcon={<SettingsIcon />}
           >
-            Einstellungen
+            <Box sx={{ display: { xs: "none", md: "inline" } }}>
+              Einstellungen
+            </Box>
           </Button>
 
           <Button
             variant="text"
             size="small"
             color="error"
-            startIcon={<LogoutIcon />}
             onClick={logout}
-            sx={{ ml: 1 }}
+            startIcon={<LogoutIcon />}
           >
-            Logout
+            <Box sx={{ display: { xs: "none", md: "inline" } }}>Logout</Box>
           </Button>
         </Box>
       </Box>
@@ -148,15 +156,16 @@ export default function Overview() {
       <Box
         flex={1}
         display="flex"
+        flexDirection={{ xs: "column", md: "row" }}
         gap={4}
-        p={3}
+        p={{ xs: 2, md: 3 }}
         boxSizing="border-box"
-        overflow="hidden"
+        overflow={{ xs: "visible", md: "hidden" }}
       >
         {/* LEFT COLUMN */}
         <Box
-          width={420}
-          minWidth={420}
+          width={{ xs: "100%", md: 420 }}
+          minWidth={{ md: 420 }}
           display="flex"
           flexDirection="column"
           gap={4}
@@ -233,7 +242,7 @@ export default function Overview() {
         </Box>
 
         {/* RIGHT COLUMN */}
-        <Box flex={1} minWidth={0} overflow="hidden">
+        <Box flex={1} minWidth={0} overflow="hidden" mt={{ xs: 4, md: 0 }}>
           <TimeSheetsPanel openForDate={openForDate} reloadKey={reloadKey} />
         </Box>
       </Box>

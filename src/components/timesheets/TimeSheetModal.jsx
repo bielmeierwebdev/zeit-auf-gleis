@@ -26,18 +26,14 @@ function calcHours(start, end, pauseMinutes) {
   const [eh, em] = end.split(":").map(Number);
 
   const minutes = eh * 60 + em - (sh * 60 + sm) - Number(pauseMinutes || 0);
-
   return Math.max(minutes / 60, 0);
 }
 
 export default function TimeSheetModal({ open, onClose, date, onSaved }) {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-
-  const [timesheetId, setTimesheetId] = useState(null);
+  //const [timesheetId, setTimesheetId] = useState(null);
   const [entries, setEntries] = useState([]);
-
-  console.log(timesheetId);
 
   useEffect(() => {
     if (!open || !date) return;
@@ -56,26 +52,15 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
 
       const dateString = date.toLocaleDateString("sv-SE");
 
-      /* ===============================
-       1️⃣ TIMESHEET HOLEN
-    =============================== */
-
-      const { data: timesheet, error: tsError } = await supabase
+      const { data: timesheet } = await supabase
         .from("timesheets")
         .select("id")
         .eq("user_id", user.id)
         .eq("date", dateString)
         .single();
 
-      if (tsError && tsError.code !== "PGRST116") {
-        console.error(tsError);
-        setLoading(false);
-        return;
-      }
-
       if (!timesheet) {
-        // ➜ NEUER TAG
-        setTimesheetId(null);
+        //setTimesheetId(null);
         setEntries([
           {
             id: crypto.randomUUID(),
@@ -90,23 +75,13 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         return;
       }
 
-      /* ===============================
-       2️⃣ ENTRIES HOLEN
-    =============================== */
-
-      const { data: entriesData, error: entriesError } = await supabase
+      const { data: entriesData } = await supabase
         .from("timesheet_entries")
         .select("id, activity, start_time, end_time, break_minutes")
         .eq("timesheet_id", timesheet.id)
         .order("start_time");
 
-      if (entriesError) {
-        console.error(entriesError);
-        setLoading(false);
-        return;
-      }
-
-      setTimesheetId(timesheet.id);
+      //setTimesheetId(timesheet.id);
       setEntries(
         entriesData.map((e) => ({
           id: e.id,
@@ -134,41 +109,25 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
     try {
       setLoading(true);
 
-      /* ===============================
-       1️⃣ USER HOLEN
-    =============================== */
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        throw new Error("Nicht eingeloggt");
-      }
+      if (!user) throw new Error("Nicht eingeloggt");
 
       const dateString = date.toLocaleDateString("sv-SE");
 
-      /* ===============================
-   1️⃣ PROFIL HOLEN
-=============================== */
-
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", user.id)
         .single();
 
-      if (profileError) throw profileError;
-
-      const userName = `${profile.first_name || ""} ${
-        profile.last_name || ""
+      const userName = `${profile?.first_name || ""} ${
+        profile?.last_name || ""
       }`.trim();
 
-      /* ===============================
-       2️⃣ TIMESHEET UPSERT
-    =============================== */
-
-      const { data: timesheet, error: tsError } = await supabase
+      const { data: timesheet } = await supabase
         .from("timesheets")
         .upsert(
           {
@@ -181,22 +140,10 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         .select()
         .single();
 
-      if (tsError) throw tsError;
-
-      /* ===============================
-       3️⃣ ALTE EINTRÄGE LÖSCHEN
-    =============================== */
-
-      const { error: deleteError } = await supabase
+      await supabase
         .from("timesheet_entries")
         .delete()
         .eq("timesheet_id", timesheet.id);
-
-      if (deleteError) throw deleteError;
-
-      /* ===============================
-       4️⃣ EINTRÄGE SPEICHERN
-    =============================== */
 
       const preparedEntries = entries
         .filter((e) => e.startTime && e.endTime)
@@ -209,26 +156,14 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
           hours: calcHours(e.startTime, e.endTime, e.breakMinutes),
         }));
 
-      const { error: entriesError } = await supabase
-        .from("timesheet_entries")
-        .insert(preparedEntries);
-
-      if (entriesError) throw entriesError;
-
-      /* ===============================
-       5️⃣ PDF GENERIEREN
-    =============================== */
+      await supabase.from("timesheet_entries").insert(preparedEntries);
 
       const pdfBytes = await generateTimeSheetPdf({
         date,
         totalHours,
-        userName: userName,
+        userName,
         entries: preparedEntries,
       });
-
-      /* ===============================
-       6️⃣ PDF HOCHLADEN
-    =============================== */
 
       const filePath = `${user.id}/${timesheet.id}.pdf`;
 
@@ -237,24 +172,14 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         upsert: true,
       });
 
-      /* ===============================
-       7️⃣ PUBLIC URL SPEICHERN
-    =============================== */
-
       const { data: urlData } = supabase.storage
         .from("timesheets")
         .getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
+      await supabase
         .from("timesheets")
         .update({ pdf_url: urlData.publicUrl })
         .eq("id", timesheet.id);
-
-      if (updateError) throw updateError;
-
-      /* ===============================
-       8️⃣ FERTIG 🎉
-    =============================== */
 
       setEditMode(false);
       onSaved?.();
@@ -287,77 +212,105 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         ) : (
           <Stack spacing={3}>
             {entries.map((entry, index) => (
-              <Box key={entry.id} display="flex" gap={2} alignItems="center">
-                <TextField
-                  label="Tätigkeit"
-                  value={entry.activity}
-                  disabled={!editMode}
-                  onChange={(e) => {
-                    const copy = [...entries];
-                    copy[index].activity = e.target.value;
-                    setEntries(copy);
-                  }}
-                  sx={{ flex: 2 }}
-                />
+              <Box
+                key={entry.id}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid #e5e7eb",
+                  backgroundColor: { xs: "#fafafa", md: "transparent" },
+                }}
+              >
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={2}
+                  alignItems={{ md: "center" }}
+                >
+                  <TextField
+                    label="Tätigkeit"
+                    value={entry.activity}
+                    disabled={!editMode}
+                    onChange={(e) => {
+                      const copy = [...entries];
+                      copy[index].activity = e.target.value;
+                      setEntries(copy);
+                    }}
+                    fullWidth
+                  />
 
-                <TextField
-                  label="Start"
-                  type="time"
-                  value={entry.startTime}
-                  disabled={!editMode}
-                  onChange={(e) => {
-                    const copy = [...entries];
-                    copy[index].startTime = e.target.value;
-                    setEntries(copy);
-                  }}
-                  sx={{ width: 120 }}
-                />
-
-                <TextField
-                  label="Ende"
-                  type="time"
-                  value={entry.endTime}
-                  disabled={!editMode}
-                  onChange={(e) => {
-                    const copy = [...entries];
-                    copy[index].endTime = e.target.value;
-                    setEntries(copy);
-                  }}
-                  sx={{ width: 120 }}
-                />
-
-                <TextField
-                  label="Pause"
-                  type="number"
-                  value={entry.breakMinutes}
-                  disabled={!editMode}
-                  onChange={(e) => {
-                    const copy = [...entries];
-                    copy[index].breakMinutes = e.target.value;
-                    setEntries(copy);
-                  }}
-                  sx={{ width: 110 }}
-                />
-
-                <Typography sx={{ width: 90 }}>
-                  {calcHours(
-                    entry.startTime,
-                    entry.endTime,
-                    entry.breakMinutes
-                  ).toFixed(2)}{" "}
-                  h
-                </Typography>
-
-                {editMode && (
-                  <IconButton
-                    color="error"
-                    onClick={() =>
-                      setEntries(entries.filter((e) => e.id !== entry.id))
-                    }
+                  <Box
+                    display="flex"
+                    gap={2}
+                    flexDirection={{ xs: "column", md: "row" }}
+                    alignItems={{ md: "center" }}
                   >
-                    <DeleteIcon />
-                  </IconButton>
-                )}
+                    <TextField
+                      label="Start"
+                      type="time"
+                      value={entry.startTime}
+                      disabled={!editMode}
+                      onChange={(e) => {
+                        const copy = [...entries];
+                        copy[index].startTime = e.target.value;
+                        setEntries(copy);
+                      }}
+                      sx={{ width: { xs: "100%", md: 120 } }}
+                    />
+
+                    <TextField
+                      label="Ende"
+                      type="time"
+                      value={entry.endTime}
+                      disabled={!editMode}
+                      onChange={(e) => {
+                        const copy = [...entries];
+                        copy[index].endTime = e.target.value;
+                        setEntries(copy);
+                      }}
+                      sx={{ width: { xs: "100%", md: 120 } }}
+                    />
+
+                    <TextField
+                      label="Pause (min)"
+                      type="number"
+                      value={entry.breakMinutes}
+                      disabled={!editMode}
+                      onChange={(e) => {
+                        const copy = [...entries];
+                        copy[index].breakMinutes = e.target.value;
+                        setEntries(copy);
+                      }}
+                      sx={{ width: { xs: "100%", md: 110 } }}
+                    />
+                  </Box>
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    width="100%"
+                  >
+                    <Typography fontWeight={500}>
+                      {calcHours(
+                        entry.startTime,
+                        entry.endTime,
+                        entry.breakMinutes
+                      ).toFixed(2)}{" "}
+                      h
+                    </Typography>
+
+                    {editMode && (
+                      <IconButton
+                        color="error"
+                        onClick={() =>
+                          setEntries(entries.filter((e) => e.id !== entry.id))
+                        }
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
+                  </Box>
+                </Stack>
               </Box>
             ))}
 

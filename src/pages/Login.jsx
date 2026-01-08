@@ -46,6 +46,7 @@ export default function Login() {
       display="flex"
       alignItems="center"
       justifyContent="center"
+      px={{ xs: 2, sm: 0 }} // ✅ mobile padding
       sx={{
         backgroundImage: `url(${background})`,
         backgroundSize: "cover",
@@ -69,27 +70,28 @@ export default function Login() {
           position: "relative",
           width: "100%",
           maxWidth: 420,
-          p: 5,
+          p: { xs: 3, sm: 5 }, // ✅ weniger Padding auf Mobile
           borderRadius: 3,
-          backgroundColor: "rgba(255,255,255,0.92)", // 👈 KEY
+          backgroundColor: "rgba(255,255,255,0.92)",
           backdropFilter: "blur(12px)",
         }}
       >
         {/* Logo + Title */}
-        <Box textAlign="center" mb={4}>
+        <Box textAlign="center" mb={{ xs: 2, sm: 4 }}>
           <Box display="flex" justifyContent="center">
             <img
               src={logo}
               alt="ZeitAufGleis Logo"
               style={{
-                height: 180,
+                height: 120,          // ✅ mobile
+                maxHeight: 180,       // ✅ desktop bleibt groß
                 maxWidth: "100%",
                 objectFit: "contain",
               }}
             />
           </Box>
 
-          <Typography variant="h5" fontWeight={600}>
+          <Typography variant="h5" fontWeight={600} mt={1}>
             Einloggen
           </Typography>
         </Box>
@@ -100,18 +102,6 @@ export default function Login() {
             label="E-Mail-Adresse"
             type="email"
             fullWidth
-            InputLabelProps={{
-              sx: {
-                color: "#374151", // dunkelgrau
-                fontWeight: 500,
-              },
-            }}
-            InputProps={{
-              sx: {
-                backgroundColor: "#ffffff",
-                borderRadius: 2,
-              },
-            }}
             margin="normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -124,25 +114,8 @@ export default function Login() {
             fullWidth
             margin="normal"
             value={password}
-            InputLabelProps={{
-              sx: {
-                color: "#374151", // dunkelgrau
-                fontWeight: 500,
-              },
-            }}
-            InputProps={{
-              sx: {
-                backgroundColor: "#ffffff",
-                borderRadius: 2,
-              },
-            }}
             onChange={(e) => setPassword(e.target.value)}
             required
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleLogin(e);
-              }
-            }}
           />
 
           {error && (
@@ -156,7 +129,7 @@ export default function Login() {
             variant="contained"
             size="large"
             fullWidth
-            sx={{ mt: 4, bgcolor: "#1E4F8A" }}
+            sx={{ mt: 3, bgcolor: "#1E4F8A" }}
             disabled={loading}
           >
             {loading ? <CircularProgress size={24} /> : "Einloggen"}
@@ -169,7 +142,7 @@ export default function Login() {
           color="text.secondary"
           align="center"
           display="block"
-          mt={3}
+          mt={2}
         >
           Mit dem Einloggen stimmen Sie den Nutzungsbedingungen und der
           Datenschutzerklärung zu.
