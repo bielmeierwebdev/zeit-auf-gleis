@@ -7,7 +7,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase"; // Pfad ggf. anpassen
+import { supabase } from "../../lib/supabase";
 
 export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
   const [user, setUser] = useState(null);
@@ -15,34 +15,51 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [openPassword, setOpenPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+
   useEffect(() => {
     if (!settingsOpen) return;
 
-    const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data?.user) return;
+    const load = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      setUser(data.user);
-      setFirstName(data.user.user_metadata?.first_name || "");
-      setLastName(data.user.user_metadata?.last_name || "");
+      if (!user) return;
+
+      setUser(user);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      setFirstName(profile?.first_name || "");
+      setLastName(profile?.last_name || "");
     };
 
-    loadUser();
+    load();
   }, [settingsOpen]);
 
   const handleSaveProfile = async () => {
+    if (!user) return;
+
     setLoading(true);
 
-    const { error } = await supabase.auth.updateUser({
-      data: {
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({
+        id: user.id,
         first_name: firstName,
         last_name: lastName,
-      },
-    });
+      });
 
     setLoading(false);
 
     if (error) {
+      console.error(error);
       alert("Fehler beim Speichern");
     } else {
       setSettingsOpen(false);
@@ -50,69 +67,97 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
   };
 
   const handleChangePassword = async () => {
-    const newPassword = prompt("Neues Passwort eingeben");
-    if (!newPassword) return;
-
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
 
     if (error) {
-      alert("Passwort konnte nicht geändert werden");
+      console.error(error);
+      alert("Fehler beim Passwort ändern");
     } else {
-      alert("Passwort erfolgreich geändert");
+      setOpenPassword(false);
+      setNewPassword("");
     }
   };
 
   return (
-    <Dialog
-      open={settingsOpen}
-      onClose={() => setSettingsOpen(false)}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogTitle>Einstellungen</DialogTitle>
+    <>
+      {/* PROFIL */}
+      <Dialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Einstellungen</DialogTitle>
 
-      <DialogContent dividers>
-        <Stack spacing={3} mt={1}>
-          <TextField
-            label="E-Mail"
-            value={user?.email || ""}
-            disabled
-            fullWidth
-          />
+        <DialogContent dividers>
+          <Stack spacing={3} mt={1}>
+            <TextField
+              label="E-Mail"
+              value={user?.email || ""}
+              disabled
+              fullWidth
+            />
 
-          <TextField
-            label="Vorname"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            fullWidth
-          />
+            <TextField
+              label="Vorname"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              fullWidth
+            />
 
-          <TextField
-            label="Nachname"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            fullWidth
-          />
+            <TextField
+              label="Nachname"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              fullWidth
+            />
 
-          <Button variant="outlined" onClick={handleChangePassword}>
-            Passwort ändern
+            <Button variant="outlined" onClick={() => setOpenPassword(true)}>
+              Passwort ändern
+            </Button>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setSettingsOpen(false)}>Abbrechen</Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveProfile}
+            disabled={loading}
+          >
+            Speichern
           </Button>
-        </Stack>
-      </DialogContent>
+        </DialogActions>
+      </Dialog>
 
-      <DialogActions>
-        <Button onClick={() => setSettingsOpen(false)}>Abbrechen</Button>
+      {/* PASSWORT */}
+      <Dialog
+        open={openPassword}
+        onClose={() => setOpenPassword(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Passwort ändern</DialogTitle>
 
-        <Button
-          variant="contained"
-          onClick={handleSaveProfile}
-          disabled={loading}
-        >
-          Speichern
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <DialogContent dividers>
+          <TextField
+            label="Neues Passwort"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            fullWidth
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenPassword(false)}>Abbrechen</Button>
+          <Button variant="contained" onClick={handleChangePassword}>
+            Ändern
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

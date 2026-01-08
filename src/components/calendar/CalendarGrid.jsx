@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Paper, Button } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -29,10 +29,19 @@ function getISOWeek(date) {
   );
 }
 
-export default function CalendarGrid({ onSelectDate }) {
+export default function CalendarGrid({
+  onSelectDate,
+  timesheetsByDate = {},
+  onMonthChange,
+}) {
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
+
+  // 🔁 Monat an Parent melden
+  useEffect(() => {
+    onMonthChange?.(year, month);
+  }, [year, month]);
 
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -40,6 +49,24 @@ export default function CalendarGrid({ onSelectDate }) {
 
   const totalCells = startDay + daysInMonth;
   const weeks = Math.ceil(totalCells / 7);
+
+  const goPrevMonth = () => {
+    if (month === 0) {
+      setMonth(11);
+      setYear((y) => y - 1);
+    } else {
+      setMonth((m) => m - 1);
+    }
+  };
+
+  const goNextMonth = () => {
+    if (month === 11) {
+      setMonth(0);
+      setYear((y) => y + 1);
+    } else {
+      setMonth((m) => m + 1);
+    }
+  };
 
   return (
     <Paper sx={{ p: 3, width: "100%" }}>
@@ -50,13 +77,7 @@ export default function CalendarGrid({ onSelectDate }) {
         justifyContent="space-between"
         mb={3}
       >
-        <IconButton
-          onClick={() =>
-            month === 0
-              ? (setMonth(11), setYear((y) => y - 1))
-              : setMonth((m) => m - 1)
-          }
-        >
+        <IconButton onClick={goPrevMonth}>
           <ChevronLeftIcon />
         </IconButton>
 
@@ -64,13 +85,7 @@ export default function CalendarGrid({ onSelectDate }) {
           {MONTHS[month]} {year}
         </Typography>
 
-        <IconButton
-          onClick={() =>
-            month === 11
-              ? (setMonth(0), setYear((y) => y + 1))
-              : setMonth((m) => m + 1)
-          }
-        >
+        <IconButton onClick={goNextMonth}>
           <ChevronRightIcon />
         </IconButton>
       </Box>
@@ -125,10 +140,17 @@ export default function CalendarGrid({ onSelectDate }) {
                 return <Box key={dayIndex} />;
               }
 
+              console.log(timesheetsByDate);
+
+              const dateObj = new Date(year, month, dayNumber);
+              const dateKey = dateObj.toLocaleDateString("sv-SE");
+              const hasEntry = Boolean(timesheetsByDate[dateKey]);
+
               return (
                 <Button
                   key={dayIndex}
-                  variant="outlined"
+                  variant={hasEntry ? "contained" : "outlined"}
+                  color={hasEntry ? "success" : "inherit"}
                   sx={{
                     aspectRatio: "1 / 1",
                     width: "100%",
@@ -136,14 +158,11 @@ export default function CalendarGrid({ onSelectDate }) {
                     borderRadius: 3,
                     fontSize: 14,
                     fontWeight: 500,
-                    borderColor: "#e5e7eb",
-                    backgroundColor: "#f9fafb",
-                    "&:hover": {
-                      backgroundColor: "#e0f2fe",
-                      borderColor: "#90caf9",
-                    },
+                    ...(hasEntry && {
+                      boxShadow: "0 0 0 2px rgba(34,197,94,0.3)",
+                    }),
                   }}
-                  onClick={() => onSelectDate(new Date(year, month, dayNumber))}
+                  onClick={() => onSelectDate(dateObj)}
                 >
                   {dayNumber}
                 </Button>

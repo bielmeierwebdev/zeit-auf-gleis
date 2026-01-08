@@ -1,18 +1,11 @@
 import TimeSheetsPanel from "../components/timesheets/TimeSheetsPanel";
 import CalendarGrid from "../components/calendar/CalendarGrid";
-import { Box, Paper, Typography, Button, Stack } from "@mui/material";
+import { Box, Paper, Typography, Button } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-} from "@mui/material";
 import { OpenSettingsModal } from "../components/settings/OpenSettingsModal";
 import logo from "../assets/ZeitAufGleis-Logo.png";
 import TimeSheetModal from "../components/timesheets/TimeSheetModal";
@@ -23,6 +16,68 @@ export default function Overview() {
 
   const [timeSheetOpen, setTimeSheetOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [monthSheets, setMonthSheets] = useState({});
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const reloadAll = () => {
+    setReloadKey((k) => k + 1);
+  };
+
+  const today = new Date();
+  const todayKey = today.toLocaleDateString("sv-SE");
+
+  // Monats-Summe berechnen
+  const totalMonthHours = Object.values(monthSheets).reduce(
+    (sum, ts) => sum + (ts.total_hours || 0),
+    0
+  );
+
+  // Soll (später aus DB)
+  const monthlyTarget = 160;
+
+  // Heute
+  const todaySheet = monthSheets[todayKey] ?? null;
+
+  const loadMonthSheets = async (year, month) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const from = new Date(year, month, 1).toISOString().split("T")[0];
+    const to = new Date(year, month + 1, 0).toISOString().split("T")[0];
+
+    const { data, error } = await supabase
+      .from("timesheets")
+      .select("id, date, total_hours")
+      .eq("user_id", user.id)
+      .gte("date", from)
+      .lte("date", to);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    console.log(data);
+
+    const map = {};
+    data.forEach((ts) => {
+      map[ts.date] = ts;
+    });
+
+    setMonthSheets(map);
+  };
+
+  // ✅ EINMAL beim Laden der Seite
+  useEffect(() => {
+    async function fetchLoadMonth() {
+      const today = new Date();
+      await loadMonthSheets(today.getFullYear(), today.getMonth());
+    }
+    fetchLoadMonth();
+  }, [reloadKey]);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -45,20 +100,14 @@ export default function Overview() {
         py={1.5}
         borderBottom="1px solid #e5e7eb"
       >
-        {/* LEFT: LOGO */}
         <Box display="flex" alignItems="center">
           <img
             src={logo}
             alt="ZeitAufGleis"
-            style={{
-              height: 40,
-              objectFit: "contain",
-              margin: -20,
-            }}
+            style={{ height: 40, objectFit: "contain", margin: -20 }}
           />
         </Box>
 
-        {/* RIGHT: ACTIONS */}
         <Box display="flex" alignItems="center">
           <Button
             variant="text"
@@ -100,7 +149,6 @@ export default function Overview() {
           gap={4}
           overflow="auto"
         >
-          {/* Überblick */}
           <Paper sx={{ p: 3 }}>
             <Typography variant="subtitle1" gutterBottom>
               Januar 2026 – Überblick
@@ -111,14 +159,16 @@ export default function Overview() {
                 <Typography variant="body2" color="text.secondary">
                   Erfasst
                 </Typography>
-                <Typography variant="h6">42,5 h</Typography>
+                <Typography variant="h6">
+                  {totalMonthHours.toFixed(2)} h
+                </Typography>
               </Box>
 
               <Box>
                 <Typography variant="body2" color="text.secondary">
                   Soll
                 </Typography>
-                <Typography variant="h6">160 h</Typography>
+                <Typography variant="h6">{monthlyTarget} h</Typography>
               </Box>
 
               <Box>
@@ -126,13 +176,16 @@ export default function Overview() {
                   Offen
                 </Typography>
                 <Typography variant="h6" color="warning.main">
-                  117,5 h
+                  {(monthlyTarget - totalMonthHours).toFixed(2)} h
                 </Typography>
               </Box>
             </Box>
           </Paper>
 
-          <CalendarGrid onSelectDate={openForDate} />
+          <CalendarGrid
+            onSelectDate={openForDate}
+            timesheetsByDate={monthSheets}
+          />
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="subtitle2" color="text.secondary">
@@ -140,12 +193,18 @@ export default function Overview() {
             </Typography>
 
             <Typography variant="h6" sx={{ mt: 0.5 }}>
-              📅 08. Januar 2026
+              📅 {today.toLocaleDateString("de-DE")}
             </Typography>
 
-            <Typography variant="body2" color="error.main" sx={{ mt: 1.5 }}>
-              Für heute wurden noch keine Stunden erfasst.
-            </Typography>
+            {todaySheet ? (
+              <Typography variant="body2" color="success.main" sx={{ mt: 1.5 }}>
+                Heute erfasst: {todaySheet.total_hours.toFixed(2)} h
+              </Typography>
+            ) : (
+              <Typography variant="body2" color="error.main" sx={{ mt: 1.5 }}>
+                Für heute wurden noch keine Stunden erfasst.
+              </Typography>
+            )}
 
             <Button
               variant="contained"
@@ -162,11 +221,10 @@ export default function Overview() {
 
         {/* RIGHT COLUMN */}
         <Box flex={1} minWidth={0} overflow="hidden">
-          <TimeSheetsPanel />
+          <TimeSheetsPanel openForDate={openForDate} reloadKey={reloadKey} />
         </Box>
       </Box>
 
-      {/* SETTINGS MODAL – kommt als Nächstes */}
       <OpenSettingsModal
         settingsOpen={settingsOpen}
         setSettingsOpen={setSettingsOpen}
@@ -176,6 +234,7 @@ export default function Overview() {
         open={timeSheetOpen}
         onClose={() => setTimeSheetOpen(false)}
         date={selectedDate}
+        reloadKey={reloadKey}
       />
     </Box>
   );
