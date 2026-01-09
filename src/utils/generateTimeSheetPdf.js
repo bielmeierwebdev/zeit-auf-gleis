@@ -1,23 +1,64 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import logoUrl from "../assets/ZeitAufGleis-Logo.png";
 
+function drawWrappedText({
+  page,
+  text,
+  x,
+  y,
+  maxWidth,
+  font,
+  size,
+  lineHeight = size + 2,
+}) {
+  if (!text) return 0;
+
+  const words = String(text).split(",");
+  let line = "";
+  let lines = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const testLine = line ? `${line},${words[i]}` : words[i];
+    const textWidth = font.widthOfTextAtSize(testLine, size);
+
+    if (textWidth > maxWidth) {
+      lines.push(line);
+      line = words[i];
+    } else {
+      line = testLine;
+    }
+  }
+
+  if (line) lines.push(line);
+
+  lines.forEach((l, i) => {
+    page.drawText(l, {
+      x,
+      y: y - i * lineHeight,
+      size,
+      font,
+    });
+  });
+
+  return lines.length * lineHeight;
+}
+
 export async function generateTimeSheetPdf({
-  userName,
+  activeCoWorker, // 👈 NEU
   date,
   entries,
   totalHours,
 }) {
+  console.log(activeCoWorker);
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4
+  let page = pdfDoc.addPage([595, 842]); // A4
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const { width, height } = page.getSize();
 
-  /* ===============================
-     LOGO
-  =============================== */
+  /* LOGO */
   const logoBytes = await fetch(logoUrl).then((res) => res.arrayBuffer());
   const logoImage = await pdfDoc.embedPng(logoBytes);
 
@@ -33,9 +74,7 @@ export async function generateTimeSheetPdf({
 
   let y = height - 60;
 
-  /* ===============================
-     HEADER
-  =============================== */
+  /* HEADER */
   page.drawText("Stundenzettel", {
     x: 40,
     y,
@@ -45,32 +84,23 @@ export async function generateTimeSheetPdf({
   });
 
   y -= 26;
-
-  page.drawText(`Name: ${userName}`, { x: 40, y, size: 11, font });
+  page.drawText(`Name: ${activeCoWorker}`, { x: 40, y, size: 11, font }); // 👈 FIX
   y -= 16;
 
-  page.drawText(
-    `Datum: ${new Date(date).toLocaleDateString("de-DE")}`,
-    { x: 40, y, size: 11, font }
-  );
+  page.drawText(`Datum: ${new Date(date).toLocaleDateString("de-DE")}`, {
+    x: 40,
+    y,
+    size: 11,
+    font,
+  });
 
   y -= 28;
 
-  /* ===============================
-     TABELLENHEADER
-  =============================== */
+  /* TABELLENHEADER */
+  const columns = ["Datum", "Ort", "Start", "Ende", "Leistung", "Nummer"];
 
-  const columns = [
-    "Datum",
-    "Ort",
-    "Start",
-    "Ende",
-    "Leistung",
-    "Nummer",
-    "Name",
-  ];
-
-  const colX = [40, 95, 155, 205, 265, 370, 430];
+  const colX = [40, 90, 150, 200, 260, 360, 430];
+  const colWidth = [45, 55, 45, 45, 95, 60, 115];
 
   columns.forEach((col, i) => {
     page.drawText(col, {
@@ -82,7 +112,6 @@ export async function generateTimeSheetPdf({
   });
 
   y -= 8;
-
   page.drawLine({
     start: { x: 40, y },
     end: { x: width - 40, y },
@@ -92,71 +121,44 @@ export async function generateTimeSheetPdf({
 
   y -= 14;
 
-  /* ===============================
-     EINTRÄGE
-  =============================== */
+  /* EINTRÄGE */
+  for (const entry of entries) {
+    let maxRowHeight = 0;
 
-  console.log(entries);
-
-  entries.forEach((entry) => {
-    page.drawText(
-      new Date(date).toLocaleDateString("de-DE"),
-      { x: colX[0], y, size: 9, font }
-    );
-
-    page.drawText(entry.location ?? "", {
-      x: colX[1],
+    page.drawText(new Date(date).toLocaleDateString("de-DE"), {
+      x: colX[0],
       y,
       size: 9,
       font,
     });
 
-    page.drawText(entry.start_time ?? "", {
-      x: colX[2],
-      y,
-      size: 9,
-      font,
-    });
+    page.drawText(entry.location ?? "", { x: colX[1], y, size: 9, font });
+    page.drawText(entry.start_time ?? "", { x: colX[2], y, size: 9, font });
+    page.drawText(entry.end_time ?? "", { x: colX[3], y, size: 9, font });
+    page.drawText(entry.service ?? "", { x: colX[4], y, size: 9, font });
 
-    page.drawText(entry.end_time ?? "", {
-      x: colX[3],
-      y,
-      size: 9,
-      font,
-    });
-
-    page.drawText(entry.service ?? "", {
-      x: colX[4],
-      y,
-      size: 9,
-      font,
-    });
-
-    page.drawText(entry.number ?? "", {
+    const numberHeight = drawWrappedText({
+      page,
+      text: entry.number ?? "",
       x: colX[5],
       y,
-      size: 9,
+      maxWidth: colWidth[5],
       font,
+      size: 9,
     });
 
-    page.drawText(entry.name ?? "", {
-      x: colX[6],
-      y,
-      size: 9,
-      font,
-    });
 
-    y -= 14;
+    maxRowHeight = Math.max(14, numberHeight || 0);
 
-    // Seitenumbruch
+    y -= maxRowHeight + 2;
+
     if (y < 80) {
+      page = pdfDoc.addPage([595, 842]);
       y = height - 60;
-      pdfDoc.addPage();
     }
-  });
+  }
 
-  y -= 10;
-
+  y -= 12;
   page.drawLine({
     start: { x: 40, y },
     end: { x: width - 40, y },
@@ -165,26 +167,12 @@ export async function generateTimeSheetPdf({
   });
 
   y -= 22;
-
   page.drawText(`Gesamtstunden: ${totalHours.toFixed(2)} h`, {
     x: 40,
     y,
     size: 13,
     font: boldFont,
   });
-
-  y -= 36;
-
-  page.drawText(
-    `Erstellt am: ${new Date().toLocaleDateString("de-DE")}`,
-    {
-      x: 40,
-      y,
-      size: 9,
-      font,
-      color: rgb(0.5, 0.5, 0.5),
-    }
-  );
 
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: "application/pdf" });

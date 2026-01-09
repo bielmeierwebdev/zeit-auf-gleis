@@ -18,6 +18,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { generateTimeSheetPdf } from "../../utils/generateTimeSheetPdf";
+import { coWorkerData } from "./coWorkerSelect";
 
 // 🔢 Stundenberechnung
 function calcHours(start, end, pauseMinutes = 0) {
@@ -34,18 +35,19 @@ function calcHours(start, end, pauseMinutes = 0) {
     endMinutes += 24 * 60;
   }
 
-  const minutes =
-    endMinutes - startMinutes - Number(pauseMinutes || 0);
+  const minutes = endMinutes - startMinutes - Number(pauseMinutes || 0);
 
   return Math.max(minutes / 60, 0);
 }
-
 
 export default function TimeSheetModal({ open, onClose, date, onSaved }) {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [entries, setEntries] = useState([]);
+  const [activeCoWorker, setActiveCoWorker] = useState("Maria RZ");
+  const [openTimeSheet, setOpenTimeSheet] = useState(false);
 
+  console.log(activeCoWorker);
   useEffect(() => {
     if (!open || !date) return;
 
@@ -58,12 +60,25 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
 
       const dateString = date.toLocaleDateString("sv-SE");
 
-      const { data: timesheet } = await supabase
+      console.log(dateString);
+
+      const { data: timesheet, error: timesheetError } = await supabase
         .from("timesheets")
         .select("id")
         .eq("user_id", user.id)
         .eq("date", dateString)
-        .single();
+        .eq("coworker_name", activeCoWorker)
+        .maybeSingle();
+
+      const { data: test } = await supabase
+        .from("timesheets")
+        .select("id, user_id, coworker_name")
+        .eq("date", dateString);
+
+      // für dateString: 8.1.2025 bekomme ich als coworker_name Thaer RZ zurück, was richtig ist... wieso funktioniert die andere abrage nicht :(
+      console.log(test);
+
+      console.log(timesheetError);
 
       if (!timesheet) {
         setEntries([
@@ -122,7 +137,7 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
     };
 
     load();
-  }, [open, date]);
+  }, [open, date, activeCoWorker]);
 
   if (!date) return null;
 
@@ -154,7 +169,7 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
       const { data: timesheet } = await supabase
         .from("timesheets")
         .upsert(
-          { user_id: user.id, date: dateString, total_hours: totalHours },
+          { user_id: user.id, date: dateString, total_hours: totalHours, coworker_name: activeCoWorker },
           { onConflict: "user_id,date" }
         )
         .select()
@@ -164,6 +179,8 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         .from("timesheet_entries")
         .delete()
         .eq("timesheet_id", timesheet.id);
+
+        console.log(entries);
 
       const preparedEntries = entries
         .filter((e) => e.startTime && e.endTime)
@@ -184,6 +201,7 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
 
       const pdfBytes = await generateTimeSheetPdf({
         date,
+        activeCoWorker,
         totalHours,
         userName,
         entries: preparedEntries,
@@ -216,162 +234,218 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
     }
   };
 
+  function handleClose() {
+    setOpenTimeSheet(false);
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Typography fontWeight={600}>
-          Stunden – {date.toLocaleDateString("de-DE")}
-        </Typography>
-        {!editMode && (
-          <IconButton onClick={() => setEditMode(true)}>
-            <EditIcon />
-          </IconButton>
-        )}
-      </DialogTitle>
-
-      <DialogContent dividers>
-        {loading ? (
-          <Typography>Lade…</Typography>
-        ) : (
-          <Stack spacing={3}>
-            {entries.map((e, i) => (
-              <Box key={e.id} p={2} border="1px solid #e5e7eb" borderRadius={2}>
-                <Stack spacing={2}>
-                  <TextField
-                    select
-                    label="Ort"
-                    value={e.location}
-                    defaultValue="Zwiesel"
-                    disabled={!editMode}
-                    onChange={(ev) => {
-                      const c = [...entries];
-                      c[i].location = ev.target.value;
-                      setEntries(c);
-                    }}
-                  >
-                    <MenuItem value="Zwiesel">Zwiesel</MenuItem>
-                    <MenuItem value="Viechtach">Viechtach</MenuItem>
-                  </TextField>
-
-                  <Box
-                    display="flex"
-                    gap={2}
-                    flexDirection={{ xs: "column", md: "row" }}
-                  >
-                    <TextField
-                      label="Start"
-                      type="time"
-                      value={e.startTime}
-                      disabled={!editMode}
-                      onChange={(ev) => {
-                        const c = [...entries];
-                        c[i].startTime = ev.target.value;
-                        setEntries(c);
-                      }}
-                    />
-                    <TextField
-                      label="Ende"
-                      type="time"
-                      value={e.endTime}
-                      disabled={!editMode}
-                      onChange={(ev) => {
-                        const c = [...entries];
-                        c[i].endTime = ev.target.value;
-                        setEntries(c);
-                      }}
-                    />
-                  </Box>
-
-                  <TextField
-                    label="Leistung"
-                    value={e.service}
-                    disabled={!editMode}
-                    onChange={(ev) => {
-                      const c = [...entries];
-                      c[i].service = ev.target.value;
-                      setEntries(c);
-                    }}
-                  />
-
-                  <TextField
-                    label="Nummer"
-                    value={e.number}
-                    disabled={!editMode}
-                    onChange={(ev) => {
-                      const c = [...entries];
-                      c[i].number = ev.target.value;
-                      setEntries(c);
-                    }}
-                  />
-
-                  <TextField
-                    label="Name"
-                    value={e.name}
-                    disabled={!editMode}
-                    onChange={(ev) => {
-                      const c = [...entries];
-                      c[i].name = ev.target.value;
-                      setEntries(c);
-                    }}
-                  />
-
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography fontWeight={500}>
-                      {calcHours(e.startTime, e.endTime).toFixed(2)} h
-                    </Typography>
-                    {editMode && (
-                      <IconButton
-                        color="error"
-                        onClick={() =>
-                          setEntries(entries.filter((x) => x.id !== e.id))
-                        }
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
-                  </Box>
-                </Stack>
-              </Box>
+    <>
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Typography fontWeight={600}>
+            Stunden – {date.toLocaleDateString("de-DE")}
+          </Typography>
+        </DialogTitle>
+        {console.log(coWorkerData)}
+        <DialogContent dividers>
+          <Typography mb={2}>
+            Bitte wähle einen Mitarbeiter aus, für den ein Stundenzettel
+            erstellt werden soll:
+          </Typography>
+          <TextField
+            select
+            label="Mitarbeiter"
+            value={activeCoWorker}
+            onChange={(e) => setActiveCoWorker(e.target.value)}
+            fullWidth
+          >
+            {coWorkerData.map((name) => (
+              <MenuItem key={name} value={name}>
+                {name}
+              </MenuItem>
             ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Abbrechen</Button>
 
-            {editMode && (
-              <Button
-                startIcon={<AddIcon />}
-                variant="outlined"
-                onClick={() =>
-                  setEntries([
-                    ...entries,
-                    {
-                      id: crypto.randomUUID(),
-                      location: "Zwiesel",
-                      startTime: "",
-                      endTime: "",
-                      service: "",
-                      number: "",
-                      name: "",
-                    },
-                  ])
-                }
-              >
-                Eintrag hinzufügen
-              </Button>
-            )}
-
-            <Divider />
-            <Typography fontWeight={600}>
-              Gesamt: {totalHours.toFixed(2)} Stunden
-            </Typography>
-          </Stack>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Schließen</Button>
-        {editMode && (
-          <Button variant="contained" color="success" onClick={handleSave}>
-            Speichern
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => setOpenTimeSheet(true)}
+          >
+            Weiter
           </Button>
-        )}
-      </DialogActions>
-    </Dialog>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={openTimeSheet}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Typography fontWeight={600}>
+            Stunden – {date.toLocaleDateString("de-DE")}
+          </Typography>
+          {!editMode && (
+            <IconButton onClick={() => setEditMode(true)}>
+              <EditIcon />
+            </IconButton>
+          )}
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {loading ? (
+            <Typography>Lade…</Typography>
+          ) : (
+            <Stack spacing={3}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: 5,
+                  p: 2,
+                  border: "1px solid #e5e7eb",
+                }}
+              >
+                <Typography fontWeight={600}>Aktiver Mitarbeiter:</Typography>
+                <Typography>{activeCoWorker}</Typography>
+              </Box>
+
+              {entries.map((e, i) => (
+                <Box
+                  key={e.id}
+                  p={2}
+                  border="1px solid #e5e7eb"
+                  borderRadius={2}
+                >
+                  <Stack spacing={2}>
+                    <TextField
+                      select
+                      label="Ort"
+                      value={e.location}
+                      defaultValue="Zwiesel"
+                      disabled={!editMode}
+                      onChange={(ev) => {
+                        const c = [...entries];
+                        c[i].location = ev.target.value;
+                        setEntries(c);
+                      }}
+                    >
+                      <MenuItem value="Zwiesel">Zwiesel</MenuItem>
+                      <MenuItem value="Viechtach">Viechtach</MenuItem>
+                    </TextField>
+
+                    <Box
+                      display="flex"
+                      gap={2}
+                      flexDirection={{ xs: "column", md: "row" }}
+                    >
+                      <TextField
+                        label="Start"
+                        type="time"
+                        value={e.startTime}
+                        disabled={!editMode}
+                        onChange={(ev) => {
+                          const c = [...entries];
+                          c[i].startTime = ev.target.value;
+                          setEntries(c);
+                        }}
+                      />
+                      <TextField
+                        label="Ende"
+                        type="time"
+                        value={e.endTime}
+                        disabled={!editMode}
+                        onChange={(ev) => {
+                          const c = [...entries];
+                          c[i].endTime = ev.target.value;
+                          setEntries(c);
+                        }}
+                      />
+                    </Box>
+
+                    <TextField
+                      label="Leistung"
+                      value={e.service}
+                      disabled={!editMode}
+                      onChange={(ev) => {
+                        const c = [...entries];
+                        c[i].service = ev.target.value;
+                        setEntries(c);
+                      }}
+                    />
+
+                    <TextField
+                      label="Nummer"
+                      value={e.number}
+                      disabled={!editMode}
+                      onChange={(ev) => {
+                        const c = [...entries];
+                        c[i].number = ev.target.value;
+                        setEntries(c);
+                      }}
+                    />
+
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography fontWeight={500}>
+                        {calcHours(e.startTime, e.endTime).toFixed(2)} h
+                      </Typography>
+                      {editMode && (
+                        <IconButton
+                          color="error"
+                          onClick={() =>
+                            setEntries(entries.filter((x) => x.id !== e.id))
+                          }
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </Stack>
+                </Box>
+              ))}
+
+              {editMode && (
+                <Button
+                  startIcon={<AddIcon />}
+                  variant="outlined"
+                  onClick={() =>
+                    setEntries([
+                      ...entries,
+                      {
+                        id: crypto.randomUUID(),
+                        location: "Zwiesel",
+                        startTime: "",
+                        endTime: "",
+                        service: "",
+                        number: "",
+                        name: "",
+                      },
+                    ])
+                  }
+                >
+                  Eintrag hinzufügen
+                </Button>
+              )}
+
+              <Divider />
+              <Typography fontWeight={600}>
+                Gesamt: {totalHours.toFixed(2)} Stunden
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Schließen</Button>
+          {editMode && (
+            <Button variant="contained" color="success" onClick={handleSave}>
+              Speichern
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

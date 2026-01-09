@@ -171,7 +171,7 @@ export default function Overview() {
           gap={4}
           overflow="auto"
         >
-          <Paper sx={{ p: 3 }}>
+          {/**  <Paper sx={{ p: 3 }}>
             <Typography variant="subtitle1" gutterBottom>
               Januar 2026 – Überblick
             </Typography>
@@ -202,7 +202,7 @@ export default function Overview() {
                 </Typography>
               </Box>
             </Box>
-          </Paper>
+          </Paper>*/}
 
           <CalendarGrid
             onSelectDate={openForDate}
