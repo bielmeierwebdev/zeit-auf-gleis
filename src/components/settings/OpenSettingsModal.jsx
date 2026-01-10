@@ -7,7 +7,12 @@ import {
   TextField,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+
+// db
+import { getUser } from "../../db/getUser.js";
+import { loadProfile } from "../../db/loadProfile";
+import { updateProfile } from "../../db/updateProfile";
+import { setNewPasswordDB } from "../../db/setNewPassword";
 
 export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
   const [user, setUser] = useState(null);
@@ -17,71 +22,53 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
 
   const [openPassword, setOpenPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  //const [soll, setSoll] = useState("");
 
   useEffect(() => {
     if (!settingsOpen) return;
 
-    const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+    async function load() {
+      // Nutzer laden
+      const user = await getUser();
       if (!user) return;
-
       setUser(user);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, monthly_target_hours")
-        .eq("id", user.id)
-        .single();
+      // Profil laden
+      const profile = await loadProfile(user.id);
 
-      //setSoll(profile?.monthly_target_hours?.toString() || "160")
       setFirstName(profile?.first_name || "");
       setLastName(profile?.last_name || "");
-    };
+    }
 
     load();
   }, [settingsOpen]);
 
-  const handleSaveProfile = async () => {
+  async function handleSaveProfile() {
     if (!user) return;
 
     setLoading(true);
 
-    const { error } = await supabase
-      .from("profiles")
-      .upsert({
-        id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        //monthly_target_hours: soll,
-      });
+    // Profil updaten
+    const error = await updateProfile(user.id, firstName, lastName);
 
     setLoading(false);
 
     if (error) {
-      console.error(error);
-      alert("Fehler beim Speichern");
+      alert("Fehler beim Speichern" + error.message);
     } else {
       setSettingsOpen(false);
     }
-  };
+  }
 
-  const handleChangePassword = async () => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
+  async function handleChangePassword() {
+    const error = await setNewPasswordDB(newPassword);
 
     if (error) {
-      console.error(error);
-      alert("Fehler beim Passwort ändern");
+      alert("Fehler beim Passwort ändern" + error.message);
     } else {
       setOpenPassword(false);
       setNewPassword("");
     }
-  };
+  }
 
   return (
     <>
@@ -116,14 +103,6 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
               onChange={(e) => setLastName(e.target.value)}
               fullWidth
             />
-
-{/**<TextField
-              label="Soll Stunden"
-              value={soll}
-              onChange={(e) => setSoll(e.target.value)}
-              fullWidth
-            /> */}
-            
 
             <Button variant="outlined" onClick={() => setOpenPassword(true)}>
               Passwort ändern
