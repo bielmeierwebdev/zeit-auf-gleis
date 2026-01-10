@@ -4,46 +4,23 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { coworkerColors } from "./coWorkerColors";
 
-const MONTHS = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
+// helpers
+import { MONTHS } from "./monthList";
+import { getISOWeek } from "./getISOWeek";
 
-function getISOWeek(date) {
-  const temp = new Date(date);
-  temp.setHours(0, 0, 0, 0);
-  temp.setDate(temp.getDate() + 3 - ((temp.getDay() + 6) % 7));
-  const week1 = new Date(temp.getFullYear(), 0, 4);
-  return (
-    1 +
-    Math.round(((temp - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
-  );
-}
+// styles
+import * as calendarStyles from "../../Styles/calendarStyles.js";
 
 export default function CalendarGrid({
   onSelectDate,
   timesheetsByDate = {},
   onMonthChange,
+  today,
 }) {
-  const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
 
-  // 🔁 Monat an Parent melden
-  useEffect(() => {
-    onMonthChange?.(year, month);
-  }, [year, month]);
-
+  // Kalendermonat Infos
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDay = (firstDay.getDay() + 6) % 7;
@@ -51,33 +28,34 @@ export default function CalendarGrid({
   const totalCells = startDay + daysInMonth;
   const weeks = Math.ceil(totalCells / 7);
 
-  const goPrevMonth = () => {
+  // Monat ändern Effekt
+  useEffect(() => {
+    onMonthChange?.(year, month);
+  }, [year, month]);
+
+  // Monat wechseln
+  function goPrevMonth() {
     if (month === 0) {
       setMonth(11);
       setYear((y) => y - 1);
     } else {
       setMonth((m) => m - 1);
     }
-  };
+  }
 
-  const goNextMonth = () => {
+  function goNextMonth() {
     if (month === 11) {
       setMonth(0);
       setYear((y) => y + 1);
     } else {
       setMonth((m) => m + 1);
     }
-  };
+  }
 
   return (
     <Paper sx={{ p: 3, width: "100%" }}>
       {/* HEADER */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={3}
-      >
+      <Box sx={calendarStyles.box}>
         <IconButton onClick={goPrevMonth}>
           <ChevronLeftIcon />
         </IconButton>
@@ -92,12 +70,7 @@ export default function CalendarGrid({
       </Box>
 
       {/* WOCHENTAGE */}
-      <Box
-        display="grid"
-        gridTemplateColumns="48px repeat(7, minmax(0, 1fr))"
-        gap={1}
-        mb={1}
-      >
+      <Box sx={calendarStyles.weekDaysBox}>
         <Typography variant="caption" align="center">
           KW
         </Typography>
@@ -119,13 +92,7 @@ export default function CalendarGrid({
         const kw = getISOWeek(firstDayOfWeek);
 
         return (
-          <Box
-            key={weekIndex}
-            display="grid"
-            gridTemplateColumns="48px repeat(7, minmax(0, 1fr))"
-            gap={1}
-            mb={1}
-          >
+          <Box key={weekIndex} sx={calendarStyles.calendarGridBox}>
             <Typography
               align="center"
               color="text.secondary"
@@ -151,22 +118,9 @@ export default function CalendarGrid({
               ].filter(Boolean);
 
               return (
-                <Button
-                  color="inherit"
-                  sx={{
-                    aspectRatio: "1 / 1",
-                    width: "100%",
-                    minWidth: 0,
-                    borderRadius: 3,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    p: 0.5,
-                  }}
-                >
+                <Button color="inherit" sx={calendarStyles.day}>
                   <Box
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center"
+                    sx={calendarStyles.dayBox}
                     onClick={() => onSelectDate(dateObj)}
                   >
                     <Typography fontSize={14} fontWeight={600}>
@@ -174,19 +128,12 @@ export default function CalendarGrid({
                     </Typography>
 
                     {coworkersForDay.length > 0 && (
-                      <Box
-                        display="flex"
-                        justifyContent="center"
-                        gap={0.5}
-                        mt={0.5}
-                      >
+                      <Box sx={calendarStyles.coworkersBox}>
                         {coworkersForDay.map((name) => (
                           <Box
                             key={name}
                             sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
+                              ...calendarStyles.coworkersDot,
                               backgroundColor: coworkerColors[name],
                             }}
                           />

@@ -1,63 +1,36 @@
 import { useState, useEffect, useContext } from "react";
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  IconButton,
-  useTheme,
-} from "@mui/material";
+import { Box, useTheme } from "@mui/material";
+import * as overviewStyles from "../Styles/overviewStyles.js";
 
 // Components & Hooks
 import TopBar from "../components/topbar/Topbar.jsx";
-
-import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import { supabase } from "../lib/supabase";
-import { useNavigate } from "react-router-dom";
-
+import CurrentPeriod from "../components/currentPeriod/CurrentPeriod.jsx";
 import CalendarGrid from "../components/calendar/CalendarGrid";
 import TimeSheetsPanel from "../components/timesheets/TimeSheetsPanel";
 import TimeSheetModal from "../components/timesheets/TimeSheetModal";
+
+//import { supabase } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
+
 import { OpenSettingsModal } from "../components/settings/OpenSettingsModal";
 import { useMonthSheets } from "../hooks/useMonthSheets";
 import { ColorModeContext } from "../ColorModeContext";
 import { coWorkerData } from "../components/timesheets/coWorkerSelect";
 
-import logo from "../assets/ZeitAufGleis-Logo.png";
-import logoDark from "../assets/ZeitAufGleis-white-Logo.png";
+// db
+import { logout } from "../db/logout";
 
 export default function Overview() {
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
   const navigate = useNavigate();
 
-  /* ===============================
-     UI STATE
-  =============================== */
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timeSheetOpen, setTimeSheetOpen] = useState(false);
-
-  /* ===============================
-     TIMESHEET MODAL STATE
-  =============================== */
   const [selectedDate, setSelectedDate] = useState(null);
   const [initialCoWorker, setInitialCoWorker] = useState(null);
-
-  /* ===============================
-     RELOAD
-  =============================== */
   const [reloadKey, setReloadKey] = useState(0);
   const reloadAll = () => setReloadKey((k) => k + 1);
-
-  /* ===============================
-     DATA (HOOK)
-  =============================== */
-  /* ===============================
-     DATA
-  =============================== */
   const { monthSheets, loadMonthSheets } = useMonthSheets();
 
   /* ===============================
@@ -82,10 +55,6 @@ export default function Overview() {
   const hasMonthSheets = monthSheetsThisMonth.length > 0;
 
   /* ===============================
-     DERIVED DATA
-  =============================== */
-
-  /* ===============================
      INITIAL LOAD / RELOAD
   =============================== */
   useEffect(() => {
@@ -93,102 +62,41 @@ export default function Overview() {
     loadMonthSheets(d.getFullYear(), d.getMonth());
   }, [reloadKey, loadMonthSheets]);
 
-  /* ===============================
-     ACTIONS
-  =============================== */
-  const logout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
-
-  const openForDate = (date, coworkerName = null) => {
+  function openForDate(date, coworkerName = null) {
     setSelectedDate(date);
     setInitialCoWorker(coworkerName);
     setTimeSheetOpen(true);
-  };
+  }
 
-  /* ===============================
-     RENDER
-  =============================== */
   return (
-    <Box
-      height="100vh"
-      display="flex"
-      flexDirection="column"
-      overflow={{ xs: "auto", md: "hidden" }}
-    >
+    <Box sx={overviewStyles.box}>
       {/* TOP BAR */}
       <TopBar
         colorMode={colorMode}
         setSettingsOpen={setSettingsOpen}
-        logout={logout}
+        logout={() => logout(navigate)}
         theme={theme}
       />
 
       {/* MAIN */}
-      <Box
-        flex={1}
-        display="flex"
-        flexDirection={{ xs: "column", md: "row" }}
-        gap={4}
-        p={{ xs: 2, md: 3 }}
-        overflow={{ xs: "visible", md: "hidden" }}
-      >
+      <Box sx={overviewStyles.mainBox}>
         {/* LEFT */}
-        <Box
-          width={{ xs: "100%", md: 420 }}
-          minWidth={{ md: 420 }}
-          display="flex"
-          flexDirection="column"
-          gap={4}
-          overflow="auto"
-        >
+        <Box sx={overviewStyles.leftPanel}>
           <CalendarGrid
             onSelectDate={(d) => openForDate(d)}
             timesheetsByDate={monthSheets}
             onMonthChange={loadMonthSheets}
+            today={now}
           />
-
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Aktueller Zeitraum
-            </Typography>
-
-            <Typography variant="h6" sx={{ mt: 0.5 }}>
-              📅{" "}
-              {now.toLocaleDateString("de-DE", {
-                month: "long",
-                year: "numeric",
-              })}
-            </Typography>
-
-            <Typography
-              sx={{ mt: 1 }}
-              color={hasMonthSheets ? "success.main" : "warning.main"}
-            >
-              {hasMonthSheets
-                ? "Es wurden bereits Stunden erfasst."
-                : "Für diesen Monat fehlen noch Einträge."}
-            </Typography>
-
-            <Box mt={2} display="flex" flexDirection="column" gap={0.5}>
-              {monthStatusByWorker.map((w) => (
-                <Box key={w.name} display="flex" justifyContent="space-between">
-                  <Typography>{w.name}</Typography>
-                  <Typography
-                    color={w.hasSheet ? "success.main" : "error.main"}
-                    fontWeight={500}
-                  >
-                    {w.hasSheet ? "✓ erfasst" : "✗ fehlt"}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
+          <CurrentPeriod
+            monthStatusByWorker={monthStatusByWorker}
+            hasMonthSheets={hasMonthSheets}
+            now={now}
+          />
         </Box>
 
         {/* RIGHT */}
-        <Box flex={1} minWidth={0} overflow="hidden">
+        <Box sx={overviewStyles.rightPanel}>
           <TimeSheetsPanel
             openForDate={openForDate}
             reloadKey={reloadKey}
