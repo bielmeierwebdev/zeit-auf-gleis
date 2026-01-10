@@ -7,6 +7,10 @@ import {
   IconButton,
   useTheme,
 } from "@mui/material";
+
+// Components & Hooks
+import TopBar from "../components/topbar/Topbar.jsx";
+
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
@@ -80,14 +84,6 @@ export default function Overview() {
   /* ===============================
      DERIVED DATA
   =============================== */
-  const today = new Date();
-  const todayKey = today.toLocaleDateString("sv-SE");
-
-  const todaySheets = monthSheets[todayKey] ?? [];
-  const todayTotal = todaySheets.reduce(
-    (sum, ts) => sum + (ts.total_hours || 0),
-    0
-  );
 
   /* ===============================
      INITIAL LOAD / RELOAD
@@ -122,53 +118,12 @@ export default function Overview() {
       overflow={{ xs: "auto", md: "hidden" }}
     >
       {/* TOP BAR */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        px={{ xs: 2, md: 3 }}
-        py={1.5}
-        borderBottom="1px solid #e5e7eb"
-      >
-        <Box display="flex" alignItems="center">
-          <img
-            src={theme.palette.mode === "dark" ? logoDark : logo}
-            alt="ZeitAufGleis"
-            style={{ height: 40 }}
-          />
-        </Box>
-
-        <Box display="flex" gap={1}>
-          <IconButton onClick={colorMode.toggleColorMode}>
-            {theme.palette.mode === "dark" ? (
-              <LightModeIcon />
-            ) : (
-              <DarkModeIcon />
-            )}
-          </IconButton>
-
-          <Button
-            variant="text"
-            size="small"
-            onClick={() => setSettingsOpen(true)}
-            startIcon={<SettingsIcon />}
-          >
-            <Box sx={{ display: { xs: "none", md: "inline" } }}>
-              Einstellungen
-            </Box>
-          </Button>
-
-          <Button
-            variant="text"
-            size="small"
-            color="error"
-            onClick={logout}
-            startIcon={<LogoutIcon />}
-          >
-            <Box sx={{ display: { xs: "none", md: "inline" } }}>Logout</Box>
-          </Button>
-        </Box>
-      </Box>
+      <TopBar
+        colorMode={colorMode}
+        setSettingsOpen={setSettingsOpen}
+        logout={logout}
+        theme={theme}
+      />
 
       {/* MAIN */}
       <Box
