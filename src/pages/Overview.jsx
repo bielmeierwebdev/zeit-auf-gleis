@@ -1,7 +1,16 @@
-import { useState, useEffect } from "react";
-import { Box, Paper, Typography, Button } from "@mui/material";
+import { useState, useEffect, useContext } from "react";
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  IconButton,
+  useTheme,
+} from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 
@@ -10,11 +19,8 @@ import TimeSheetsPanel from "../components/timesheets/TimeSheetsPanel";
 import TimeSheetModal from "../components/timesheets/TimeSheetModal";
 import { OpenSettingsModal } from "../components/settings/OpenSettingsModal";
 import { useMonthSheets } from "../hooks/useMonthSheets";
-import { useTheme, IconButton } from "@mui/material";
-import { useContext } from "react";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
 import { ColorModeContext } from "../ColorModeContext";
+import { coWorkerData } from "../components/timesheets/coWorkerSelect";
 
 import logo from "../assets/ZeitAufGleis-Logo.png";
 import logoDark from "../assets/ZeitAufGleis-white-Logo.png";
@@ -22,7 +28,6 @@ import logoDark from "../assets/ZeitAufGleis-white-Logo.png";
 export default function Overview() {
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
-
   const navigate = useNavigate();
 
   /* ===============================
@@ -46,7 +51,31 @@ export default function Overview() {
   /* ===============================
      DATA (HOOK)
   =============================== */
+  /* ===============================
+     DATA
+  =============================== */
   const { monthSheets, loadMonthSheets } = useMonthSheets();
+
+  /* ===============================
+     AKTUELLER MONAT
+  =============================== */
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthSheetsArray = Object.values(monthSheets).flat();
+
+  const monthSheetsThisMonth = monthSheetsArray.filter((s) => {
+    const d = new Date(s.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const monthStatusByWorker = coWorkerData.map((name) => ({
+    name,
+    hasSheet: monthSheetsThisMonth.some((s) => s.coworker_name === name),
+  }));
+
+  const hasMonthSheets = monthSheetsThisMonth.length > 0;
 
   /* ===============================
      DERIVED DATA
@@ -101,15 +130,13 @@ export default function Overview() {
         py={1.5}
         borderBottom="1px solid #e5e7eb"
       >
-          {theme.palette.mode === "dark" ? (
-            <Box display="flex" alignItems="center">
-              <img src={logoDark} alt="ZeitAufGleis" style={{ height: 40 }} />
-            </Box>
-          ) : (
-            <Box display="flex" alignItems="center">
-              <img src={logo} alt="ZeitAufGleis" style={{ height: 40 }} />
-            </Box>
-          )}
+        <Box display="flex" alignItems="center">
+          <img
+            src={theme.palette.mode === "dark" ? logoDark : logo}
+            alt="ZeitAufGleis"
+            style={{ height: 40 }}
+          />
+        </Box>
 
         <Box display="flex" gap={1}>
           <IconButton onClick={colorMode.toggleColorMode}>
@@ -169,32 +196,39 @@ export default function Overview() {
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="subtitle2" color="text.secondary">
-              Heute
+              Aktueller Zeitraum
             </Typography>
 
             <Typography variant="h6" sx={{ mt: 0.5 }}>
-              📅 {today.toLocaleDateString("de-DE")}
+              📅{" "}
+              {now.toLocaleDateString("de-DE", {
+                month: "long",
+                year: "numeric",
+              })}
             </Typography>
 
-            {todaySheets.length > 0 ? (
-              <Typography color="success.main">
-                Heute erfasst: {todayTotal.toFixed(2)} h
-              </Typography>
-            ) : (
-              <Typography color="error.main">
-                Für heute wurden noch keine Stunden erfasst.
-              </Typography>
-            )}
-
-            <Button
-              variant="contained"
-              color="success"
-              sx={{ mt: 3 }}
-              fullWidth
-              onClick={() => openForDate(new Date())}
+            <Typography
+              sx={{ mt: 1 }}
+              color={hasMonthSheets ? "success.main" : "warning.main"}
             >
-              Stunden für heute erfassen
-            </Button>
+              {hasMonthSheets
+                ? "Es wurden bereits Stunden erfasst."
+                : "Für diesen Monat fehlen noch Einträge."}
+            </Typography>
+
+            <Box mt={2} display="flex" flexDirection="column" gap={0.5}>
+              {monthStatusByWorker.map((w) => (
+                <Box key={w.name} display="flex" justifyContent="space-between">
+                  <Typography>{w.name}</Typography>
+                  <Typography
+                    color={w.hasSheet ? "success.main" : "error.main"}
+                    fontWeight={500}
+                  >
+                    {w.hasSheet ? "✓ erfasst" : "✗ fehlt"}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Paper>
         </Box>
 

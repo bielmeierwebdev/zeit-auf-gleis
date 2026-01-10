@@ -23,6 +23,8 @@ import { DataGrid } from "@mui/x-data-grid";
 import { dataGridLocaleDE } from "./datagridLocaleDe";
 import TableFilter from "./TableFilter";
 import { generateStundenblattPdf } from "../../utils/generateStundenblattPdf";
+import { useTheme, useMediaQuery } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 
 export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [userId, setUserId] = useState(null);
@@ -30,6 +32,9 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [timeSheets, setTimeSheets] = useState([]);
   const [stundenblaetter, setStundenblaetter] = useState([]);
   const [deleteType, setDeleteType] = useState(null);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [selectedSheet, setSelectedSheet] = useState(null);
   const [selectionModel, setSelectionModel] = useState([]);
@@ -50,6 +55,67 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
   const [openDelete, setOpenDelete] = useState(false);
   const [activeSheet, setActiveSheet] = useState(null);
+
+  async function handleCreateStundenblatt() {
+    const selectedIds = Array.from(rowSelectionModel.ids ?? []);
+
+    const selectedSheets = filteredTimeSheets.filter((s) =>
+      selectedIds.includes(s.id)
+    );
+
+    if (selectedSheets.length === 0) {
+      alert("Bitte mindestens einen Stundenzettel auswählen.");
+      return;
+    }
+
+    const coworkerName = selectedSheets[0].coworker_name;
+
+    const { data: entries } = await supabase
+      .from("timesheet_entries")
+      .select(
+        `
+              timesheet_id,
+              location,
+              start_time,
+              end_time,
+              service,
+              number
+            `
+      )
+      .in("timesheet_id", selectedIds);
+
+    const sheetsWithEntries = selectedSheets.map((sheet) => ({
+      ...sheet,
+      timesheet_entries: entries.filter((e) => e.timesheet_id === sheet.id),
+    }));
+
+    const pdf = await generateStundenblattPdf({
+      coworkerName,
+      sheets: sheetsWithEntries,
+    });
+
+    const filePath = `${userId}/stundenblatt-${Date.now()}.pdf`;
+
+    await supabase.storage.from("stundenblaetter").upload(filePath, pdf, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
+
+    const { data } = supabase.storage
+      .from("stundenblaetter")
+      .getPublicUrl(filePath);
+
+    await supabase.from("stundenblaetter").insert({
+      user_id: userId,
+      coworker_name: coworkerName,
+      from_date: selectedSheets.at(-1).date,
+      to_date: selectedSheets[0].date,
+      total_hours: selectedSheets.reduce((sum, s) => sum + s.total_hours, 0),
+      pdf_url: data.publicUrl,
+    });
+
+    onReload?.();
+  }
 
   /* ===============================
      AUTH / USER
@@ -152,8 +218,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
       const normalized = sheet.coworker_name?.toLowerCase() ?? "";
       if (!normalized.includes(nameFilterStundenblaetter)) return false;
     }
-
-    console.log(sheet);
 
     if (dateFilterStundenblaetter === "none") return true;
     const d = new Date(sheet.from_date);
@@ -273,6 +337,43 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
     },
   ];
 
+  const mobileColumns = [
+    {
+      field: "date",
+      headerName: "Tag",
+      flex: 1,
+      valueFormatter: (v) =>
+        new Date(v).toLocaleDateString("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+        }),
+    },
+    {
+      field: "coworker_name",
+      headerName: "Name",
+      flex: 1.2,
+    },
+    {
+      field: "total_hours",
+      headerName: "h",
+      width: 70,
+      valueFormatter: (v) => `${v.toFixed(2)}`,
+    },
+    {
+      field: "actions",
+      headerName: "",
+      width: 60,
+      renderCell: (p) => (
+        <IconButton
+          size="small"
+          onClick={() => openForDate(new Date(p.row.date), p.row.coworker_name)}
+        >
+          <EditIcon fontSize="small" />
+        </IconButton>
+      ),
+    },
+  ];
+
   /* ===============================
      RENDER
   =============================== */
@@ -297,125 +398,71 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
-            height: { xs: 400, md: 400 },
+            height: { xs: 520, md: 380 },
           }}
         >
+          {/* HEADER */}
           <Box mb={2}>
+            {/* Titel + Actions */}
             <Box
               display="flex"
               alignItems="center"
               justifyContent="space-between"
-              mb={1.5}
-              flexWrap="wrap"
-              gap={2}
+              mb={2}
             >
               <Typography variant="h6">Alle Stundenzettel</Typography>
 
-              <Stack direction="row" spacing={2} flexWrap="wrap">
-                <TableFilter
-                  value={dateFilter}
-                  onChange={setDateFilter}
-                  nameFilter={nameFilter}
-                  setNameFilter={setNameFilter}
-                />
+              <Stack direction="row" spacing={1} alignItems="center">
+                {/* Desktop Button */}
+                {!isMobile && (
+                  <Button
+                    variant="contained"
+                    disabled={rowSelectionModel.length === 0}
+                    onClick={handleCreateStundenblatt}
+                  >
+                    Stundenblatt erstellen
+                  </Button>
+                )}
 
-                <Button
-                  variant="contained"
-                  disabled={rowSelectionModel.length === 0}
-                  onClick={async () => {
-                    const selectedIds = Array.from(rowSelectionModel.ids ?? []);
-
-                    const selectedSheets = filteredTimeSheets.filter((s) =>
-                      selectedIds.includes(s.id)
-                    );
-
-                    if (selectedSheets.length === 0) {
-                      alert("Bitte mindestens einen Stundenzettel auswählen.");
-                      return;
-                    }
-
-                    const coworkerName = selectedSheets[0].coworker_name;
-
-                    const { data: entries, error } = await supabase
-                      .from("timesheet_entries")
-                      .select(
-                        `
-      timesheet_id,
-      location,
-      start_time,
-      end_time,
-      service,
-      number
-    `
-                      )
-                      .in("timesheet_id", selectedIds);
-
-                    if (error) {
-                      console.error(error);
-                      alert("Fehler beim Laden der Einträge");
-                      return;
-                    }
-
-                    const sheetsWithEntries = selectedSheets.map((sheet) => ({
-                      ...sheet,
-                      timesheet_entries: entries.filter(
-                        (e) => e.timesheet_id === sheet.id
-                      ),
-                    }));
-
-                    const pdf = await generateStundenblattPdf({
-                      coworkerName,
-                      sheets: sheetsWithEntries,
-                    });
-
-                    const filePath = `${userId}/stundenblatt-${Date.now()}.pdf`;
-
-                    await supabase.storage
-                      .from("stundenblaetter")
-                      .upload(filePath, pdf, {
-                        contentType: "application/pdf",
-                        upsert: true,
-                      });
-
-                    const { data } = supabase.storage
-                      .from("stundenblaetter")
-                      .getPublicUrl(filePath);
-
-                    await supabase.from("stundenblaetter").insert({
-                      user_id: userId,
-                      coworker_name: coworkerName,
-                      from_date: selectedSheets.at(-1).date,
-                      to_date: selectedSheets[0].date,
-                      total_hours: selectedSheets.reduce(
-                        (sum, s) => sum + s.total_hours,
-                        0
-                      ),
-                      pdf_url: data.publicUrl,
-                    });
-
-                    onReload?.();
-                  }}
-                >
-                  Stundenblatt erstellen
-                </Button>
+                {/* Mobile IconButton */}
+                {isMobile && (
+                  <IconButton
+                    color="primary"
+                    disabled={rowSelectionModel.length === 0}
+                    onClick={handleCreateStundenblatt}
+                  >
+                    <AddIcon />
+                  </IconButton>
+                )}
 
                 <IconButton onClick={() => setShowPreview((p) => !p)}>
                   {showPreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
                 </IconButton>
               </Stack>
             </Box>
+
+            {/* FILTER – IMMER UNTER TITEL */}
+            <Box>
+              <TableFilter
+                value={dateFilter}
+                onChange={setDateFilter}
+                nameFilter={nameFilter}
+                setNameFilter={setNameFilter}
+              />
+            </Box>
           </Box>
 
           <Box sx={{ flex: 1, overflow: "auto" }}>
             <DataGrid
               rows={filteredTimeSheets}
-              columns={columns}
+              columns={isMobile ? mobileColumns : columns}
               checkboxSelection
               onRowSelectionModelChange={(model) => {
                 setRowSelectionModel(model);
               }}
               onRowClick={(p) => setSelectedSheet(p.row)}
               localeText={dataGridLocaleDE}
+              pageSizeOptions={isMobile ? [5] : [10, 25, 100]}
             />
           </Box>
         </Paper>
@@ -425,28 +472,23 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             p: 3,
             display: "flex",
             flexDirection: "column",
-            height: 350,
+            height: { xs: 520, md: 380 },
           }}
         >
-          {/* HEADER */}
-          <Stack
-            direction={showPreview ? "column" : { xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={showPreview ? "flex-start" : { md: "center" }}
-            justifyContent="space-between"
-            mb={2}
-          >
+          {/* HEADER: Titel */}
+          <Box mb={1.5}>
             <Typography variant="h6">Stundenblätter</Typography>
+          </Box>
 
-            <Box display="flex" gap={2} flexWrap="wrap">
-              <TableFilter
-                value={dateFilterStundenblaetter}
-                onChange={setDateFilterStundenblaetter}
-                nameFilter={nameFilterStundenblaetter}
-                setNameFilter={setNameFilterStundenblaetter}
-              />
-            </Box>
-          </Stack>
+          {/* FILTER: immer volle Breite */}
+          <Box mb={2}>
+            <TableFilter
+              value={dateFilterStundenblaetter}
+              onChange={setDateFilterStundenblaetter}
+              nameFilter={nameFilterStundenblaetter}
+              setNameFilter={setNameFilterStundenblaetter}
+            />
+          </Box>
 
           {/* TABLE */}
           <Box sx={{ flex: 1, overflow: "auto" }}>

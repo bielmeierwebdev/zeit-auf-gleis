@@ -48,17 +48,22 @@ export default function TimeSheetModal({
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(true);
   const [entries, setEntries] = useState([]);
-  const [activeCoWorker, setActiveCoWorker] = useState(
-    initialCoWorker || "Maria RZ"
-  );
+ const [activeCoWorker, setActiveCoWorker] = useState(null);
+
   const [openTimeSheet, setOpenTimeSheet] = useState(false);
 
-  useEffect(() => {
-    if (initialCoWorker) {
-      setActiveCoWorker(initialCoWorker);
-      setOpenTimeSheet(true); // direkt ins Stundenzettel-Modal
-    }
-  }, [initialCoWorker]);
+ useEffect(() => {
+  if (!open) return;
+
+  if (initialCoWorker) {
+    setActiveCoWorker(initialCoWorker);
+    setOpenTimeSheet(true); // direkt ins Stundenzettel-Modal
+  } else {
+    setActiveCoWorker(null); // Kalender-Fall
+    setOpenTimeSheet(false);
+  }
+}, [initialCoWorker, open]);
+
 
   useEffect(() => {
     if (!openTimeSheet || !date) return;
@@ -73,6 +78,8 @@ export default function TimeSheetModal({
 
       const dateString = date.toLocaleDateString("sv-SE");
 
+      console.log(activeCoWorker);
+
       const { data: timesheet } = await supabase
         .from("timesheets")
         .select("id")
@@ -80,6 +87,7 @@ export default function TimeSheetModal({
         .eq("date", dateString)
         .eq("coworker_name", activeCoWorker)
         .maybeSingle();
+
 
       if (!timesheet) {
         // 🆕 neuer Stundenzettel

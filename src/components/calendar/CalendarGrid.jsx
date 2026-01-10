@@ -35,7 +35,6 @@ export default function CalendarGrid({
   timesheetsByDate = {},
   onMonthChange,
 }) {
-  console.log(timesheetsByDate);
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
@@ -150,8 +149,6 @@ export default function CalendarGrid({
               const coworkersForDay = [
                 ...new Set(sheetsForDay.map((s) => s.coworker_name)),
               ].filter(Boolean);
-
-              console.log(coworkersForDay);
 
               return (
                 <Button

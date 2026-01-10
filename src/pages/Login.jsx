@@ -83,8 +83,8 @@ export default function Login() {
               src={logo}
               alt="ZeitAufGleis Logo"
               style={{
-                height: 120,          // ✅ mobile
-                maxHeight: 180,       // ✅ desktop bleibt groß
+                height: 120,        
+                maxHeight: 180,       
                 maxWidth: "100%",
                 objectFit: "contain",
               }}
