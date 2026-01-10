@@ -246,7 +246,11 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
       headerName: "Aktionen",
       renderCell: (p) => (
         <>
-          <IconButton onClick={() => openForDate(new Date(p.row.date), p.row.coworker_name)}>
+          <IconButton
+            onClick={() =>
+              openForDate(new Date(p.row.date), p.row.coworker_name)
+            }
+          >
             <EditIcon />
           </IconButton>
 
@@ -296,44 +300,46 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             height: { xs: 400, md: 400 },
           }}
         >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ md: "center" }}
-            justifyContent="space-between"
-            mb={2}
-          >
-            <Typography variant="h6">Alle Stundenzettel</Typography>
+          <Box mb={2}>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={1.5}
+              flexWrap="wrap"
+              gap={2}
+            >
+              <Typography variant="h6">Alle Stundenzettel</Typography>
 
-            <Stack direction="row" spacing={2} flexWrap="wrap">
-              <TableFilter
-                value={dateFilter}
-                onChange={setDateFilter}
-                nameFilter={nameFilter}
-                setNameFilter={setNameFilter}
-              />
+              <Stack direction="row" spacing={2} flexWrap="wrap">
+                <TableFilter
+                  value={dateFilter}
+                  onChange={setDateFilter}
+                  nameFilter={nameFilter}
+                  setNameFilter={setNameFilter}
+                />
 
-              <Button
-                variant="contained"
-                disabled={rowSelectionModel.length === 0}
-                onClick={async () => {
-                  const selectedIds = Array.from(rowSelectionModel.ids ?? []);
+                <Button
+                  variant="contained"
+                  disabled={rowSelectionModel.length === 0}
+                  onClick={async () => {
+                    const selectedIds = Array.from(rowSelectionModel.ids ?? []);
 
-                  const selectedSheets = filteredTimeSheets.filter((s) =>
-                    selectedIds.includes(s.id)
-                  );
+                    const selectedSheets = filteredTimeSheets.filter((s) =>
+                      selectedIds.includes(s.id)
+                    );
 
-                  if (selectedSheets.length === 0) {
-                    alert("Bitte mindestens einen Stundenzettel auswählen.");
-                    return;
-                  }
+                    if (selectedSheets.length === 0) {
+                      alert("Bitte mindestens einen Stundenzettel auswählen.");
+                      return;
+                    }
 
-                  const coworkerName = selectedSheets[0].coworker_name;
+                    const coworkerName = selectedSheets[0].coworker_name;
 
-                  const { data: entries, error } = await supabase
-                    .from("timesheet_entries")
-                    .select(
-                      `
+                    const { data: entries, error } = await supabase
+                      .from("timesheet_entries")
+                      .select(
+                        `
       timesheet_id,
       location,
       start_time,
@@ -341,63 +347,64 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
       service,
       number
     `
-                    )
-                    .in("timesheet_id", selectedIds);
+                      )
+                      .in("timesheet_id", selectedIds);
 
-                  if (error) {
-                    console.error(error);
-                    alert("Fehler beim Laden der Einträge");
-                    return;
-                  }
+                    if (error) {
+                      console.error(error);
+                      alert("Fehler beim Laden der Einträge");
+                      return;
+                    }
 
-                  const sheetsWithEntries = selectedSheets.map((sheet) => ({
-                    ...sheet,
-                    timesheet_entries: entries.filter(
-                      (e) => e.timesheet_id === sheet.id
-                    ),
-                  }));
+                    const sheetsWithEntries = selectedSheets.map((sheet) => ({
+                      ...sheet,
+                      timesheet_entries: entries.filter(
+                        (e) => e.timesheet_id === sheet.id
+                      ),
+                    }));
 
-                  const pdf = await generateStundenblattPdf({
-                    coworkerName,
-                    sheets: sheetsWithEntries,
-                  });
-
-                  const filePath = `${userId}/stundenblatt-${Date.now()}.pdf`;
-
-                  await supabase.storage
-                    .from("stundenblaetter")
-                    .upload(filePath, pdf, {
-                      contentType: "application/pdf",
-                      upsert: true,
+                    const pdf = await generateStundenblattPdf({
+                      coworkerName,
+                      sheets: sheetsWithEntries,
                     });
 
-                  const { data } = supabase.storage
-                    .from("stundenblaetter")
-                    .getPublicUrl(filePath);
+                    const filePath = `${userId}/stundenblatt-${Date.now()}.pdf`;
 
-                  await supabase.from("stundenblaetter").insert({
-                    user_id: userId,
-                    coworker_name: coworkerName,
-                    from_date: selectedSheets.at(-1).date,
-                    to_date: selectedSheets[0].date,
-                    total_hours: selectedSheets.reduce(
-                      (sum, s) => sum + s.total_hours,
-                      0
-                    ),
-                    pdf_url: data.publicUrl,
-                  });
+                    await supabase.storage
+                      .from("stundenblaetter")
+                      .upload(filePath, pdf, {
+                        contentType: "application/pdf",
+                        upsert: true,
+                      });
 
-                  onReload?.();
-                }}
-              >
-                Stundenblatt erstellen
-              </Button>
+                    const { data } = supabase.storage
+                      .from("stundenblaetter")
+                      .getPublicUrl(filePath);
 
-              <IconButton onClick={() => setShowPreview((p) => !p)}>
-                {showPreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              </IconButton>
-            </Stack>
-          </Stack>
+                    await supabase.from("stundenblaetter").insert({
+                      user_id: userId,
+                      coworker_name: coworkerName,
+                      from_date: selectedSheets.at(-1).date,
+                      to_date: selectedSheets[0].date,
+                      total_hours: selectedSheets.reduce(
+                        (sum, s) => sum + s.total_hours,
+                        0
+                      ),
+                      pdf_url: data.publicUrl,
+                    });
+
+                    onReload?.();
+                  }}
+                >
+                  Stundenblatt erstellen
+                </Button>
+
+                <IconButton onClick={() => setShowPreview((p) => !p)}>
+                  {showPreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                </IconButton>
+              </Stack>
+            </Box>
+          </Box>
 
           <Box sx={{ flex: 1, overflow: "auto" }}>
             <DataGrid
@@ -421,16 +428,27 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             height: 350,
           }}
         >
-          <Typography variant="h6" mb={2}>
-            Stundenblätter
-          </Typography>
+          {/* HEADER */}
+          <Stack
+            direction={showPreview ? "column" : { xs: "column", md: "row" }}
+            spacing={2}
+            alignItems={showPreview ? "flex-start" : { md: "center" }}
+            justifyContent="space-between"
+            mb={2}
+          >
+            <Typography variant="h6">Stundenblätter</Typography>
 
-          <TableFilter
-            value={dateFilterStundenblaetter}
-            onChange={setDateFilterStundenblaetter}
-            nameFilter={nameFilterStundenblaetter}
-            setNameFilter={setNameFilterStundenblaetter}
-          />
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <TableFilter
+                value={dateFilterStundenblaetter}
+                onChange={setDateFilterStundenblaetter}
+                nameFilter={nameFilterStundenblaetter}
+                setNameFilter={setNameFilterStundenblaetter}
+              />
+            </Box>
+          </Stack>
+
+          {/* TABLE */}
           <Box sx={{ flex: 1, overflow: "auto" }}>
             {stundenblaetter.length > 0 ? (
               <DataGrid
@@ -449,7 +467,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                           })
                         : "",
                   },
-
                   { field: "coworker_name", headerName: "Name", flex: 1 },
                   {
                     field: "total_hours",
@@ -462,12 +479,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                     headerName: "PDF",
                     renderCell: (p) => (
                       <>
-                        <IconButton
-                          onClick={() => {
-                            console.log(p);
-                            window.open(p.row.pdf_url);
-                          }}
-                        >
+                        <IconButton onClick={() => window.open(p.row.pdf_url)}>
                           <DownloadIcon />
                         </IconButton>
                         <IconButton

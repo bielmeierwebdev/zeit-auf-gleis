@@ -9,10 +9,20 @@ import CalendarGrid from "../components/calendar/CalendarGrid";
 import TimeSheetsPanel from "../components/timesheets/TimeSheetsPanel";
 import TimeSheetModal from "../components/timesheets/TimeSheetModal";
 import { OpenSettingsModal } from "../components/settings/OpenSettingsModal";
+import { useMonthSheets } from "../hooks/useMonthSheets";
+import { useTheme, IconButton } from "@mui/material";
+import { useContext } from "react";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import { ColorModeContext } from "../ColorModeContext";
 
 import logo from "../assets/ZeitAufGleis-Logo.png";
+import logoDark from "../assets/ZeitAufGleis-white-Logo.png";
 
 export default function Overview() {
+  const theme = useTheme();
+  const colorMode = useContext(ColorModeContext);
+
   const navigate = useNavigate();
 
   /* ===============================
@@ -28,17 +38,19 @@ export default function Overview() {
   const [initialCoWorker, setInitialCoWorker] = useState(null);
 
   /* ===============================
-     DATA STATE
+     RELOAD
   =============================== */
-  const [monthSheets, setMonthSheets] = useState({});
-  const [monthlyTarget, setMonthlyTarget] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
-
-  /* ===============================
-     HELPERS
-  =============================== */
   const reloadAll = () => setReloadKey((k) => k + 1);
 
+  /* ===============================
+     DATA (HOOK)
+  =============================== */
+  const { monthSheets, loadMonthSheets } = useMonthSheets();
+
+  /* ===============================
+     DERIVED DATA
+  =============================== */
   const today = new Date();
   const todayKey = today.toLocaleDateString("sv-SE");
 
@@ -48,72 +60,22 @@ export default function Overview() {
     0
   );
 
-  const totalMonthHours = Object.values(monthSheets).reduce(
-    (sum, daySheets) =>
-      sum + daySheets.reduce((s, ts) => s + (ts.total_hours || 0), 0),
-    0
-  );
-
   /* ===============================
-     LOAD MONTH DATA
-  =============================== */
-  const loadMonthSheets = async (year, month) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("monthly_target_hours")
-      .eq("id", user.id)
-      .single();
-
-    setMonthlyTarget(Number(profile?.monthly_target_hours || 0));
-
-    const from = new Date(year, month, 1).toISOString().split("T")[0];
-    const to = new Date(year, month + 1, 0).toISOString().split("T")[0];
-
-    const { data, error } = await supabase
-      .from("timesheets")
-      .select("id, date, total_hours, coworker_name")
-      .eq("user_id", user.id)
-      .gte("date", from)
-      .lte("date", to);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    const map = {};
-    (data || []).forEach((ts) => {
-      if (!map[ts.date]) map[ts.date] = [];
-      map[ts.date].push(ts);
-    });
-
-    setMonthSheets(map);
-  };
-
-  /* ===============================
-     INITIAL LOAD + RELOAD
+     INITIAL LOAD / RELOAD
   =============================== */
   useEffect(() => {
     const d = new Date();
     loadMonthSheets(d.getFullYear(), d.getMonth());
-  }, [reloadKey]);
+  }, [reloadKey, loadMonthSheets]);
 
   /* ===============================
-     NAV / AUTH
+     ACTIONS
   =============================== */
   const logout = async () => {
     await supabase.auth.signOut();
     navigate("/login");
   };
 
-  /* ===============================
-     OPEN TIMESHEET (ZENTRAL!)
-  =============================== */
   const openForDate = (date, coworkerName = null) => {
     setSelectedDate(date);
     setInitialCoWorker(coworkerName);
@@ -139,11 +101,25 @@ export default function Overview() {
         py={1.5}
         borderBottom="1px solid #e5e7eb"
       >
-        <Box display="flex" alignItems="center">
-          <img src={logo} alt="ZeitAufGleis" style={{ height: 40 }} />
-        </Box>
+          {theme.palette.mode === "dark" ? (
+            <Box display="flex" alignItems="center">
+              <img src={logoDark} alt="ZeitAufGleis" style={{ height: 40 }} />
+            </Box>
+          ) : (
+            <Box display="flex" alignItems="center">
+              <img src={logo} alt="ZeitAufGleis" style={{ height: 40 }} />
+            </Box>
+          )}
 
         <Box display="flex" gap={1}>
+          <IconButton onClick={colorMode.toggleColorMode}>
+            {theme.palette.mode === "dark" ? (
+              <LightModeIcon />
+            ) : (
+              <DarkModeIcon />
+            )}
+          </IconButton>
+
           <Button
             variant="text"
             size="small"
