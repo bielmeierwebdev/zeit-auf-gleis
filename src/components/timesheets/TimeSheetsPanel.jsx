@@ -25,6 +25,7 @@ import TableFilter from "./TableFilter";
 import { generateStundenblattPdf } from "../../utils/generateStundenblattPdf";
 import { useTheme, useMediaQuery } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import Error from "../../Error";
 
 export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [userId, setUserId] = useState(null);
@@ -55,8 +56,13 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
   const [openDelete, setOpenDelete] = useState(false);
   const [activeSheet, setActiveSheet] = useState(null);
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleCreateStundenblatt() {
+    console.log(filteredTimeSheets);
+    console.log(rowSelectionModel);
+
     const selectedIds = Array.from(rowSelectionModel.ids ?? []);
 
     const selectedSheets = filteredTimeSheets.filter((s) =>
@@ -65,6 +71,18 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
     if (selectedSheets.length === 0) {
       alert("Bitte mindestens einen Stundenzettel auswählen.");
+      return;
+    }
+
+    const hasDifferentCoworkers = (rows) => {
+      const names = new Set(rows.map((r) => r.coworker_name));
+      return names.size > 1;
+    };
+
+    // Verwendung
+    if (hasDifferentCoworkers(selectedSheets)) {
+      setErrorOpen(true);
+      setErrorMessage("Bitte nur Dateien mit dem gleichen Mitarbeiter auswählen.");
       return;
     }
 
@@ -105,6 +123,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
       .from("stundenblaetter")
       .getPublicUrl(filePath);
 
+    console.log(userId);
     await supabase.from("stundenblaetter").insert({
       user_id: userId,
       coworker_name: coworkerName,
@@ -116,6 +135,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
     onReload?.();
   }
+
+  useEffect(() => {
+    console.log("Row Selection Model:", rowSelectionModel);
+  }, [rowSelectionModel]);
 
   /* ===============================
      AUTH / USER
@@ -212,6 +235,8 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
     return true;
   });
+
+  console.log("Filtered Time Sheets:", filteredTimeSheets);
 
   const filteredStundenblaetter = stundenblaetter.filter((sheet) => {
     if (nameFilterStundenblaetter !== "all") {
@@ -415,13 +440,33 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
               <Stack direction="row" spacing={1} alignItems="center">
                 {/* Desktop Button */}
                 {!isMobile && (
-                  <Button
-                    variant="contained"
-                    disabled={rowSelectionModel.length === 0}
-                    onClick={handleCreateStundenblatt}
-                  >
-                    Stundenblatt erstellen
-                  </Button>
+                  <>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        const allIds = filteredTimeSheets.map((r) => r.id);
+                        const isAllSelected =
+                          rowSelectionModel.ids.size === allIds.length;
+
+                        setRowSelectionModel({
+                          type: "include",
+                          ids: isAllSelected ? new Set() : new Set(allIds),
+                        });
+                      }}
+                    >
+                      {rowSelectionModel.ids.size === filteredTimeSheets.length
+                        ? "Auswahl löschen"
+                        : "Alle auswählen"}
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      disabled={rowSelectionModel.length === 0}
+                      onClick={handleCreateStundenblatt}
+                    >
+                      Stundenblatt erstellen
+                    </Button>
+                  </>
                 )}
 
                 {/* Mobile IconButton */}
@@ -451,16 +496,22 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
               />
             </Box>
           </Box>
-
+          {}
           <Box sx={{ flex: 1, overflow: "auto" }}>
             <DataGrid
               rows={filteredTimeSheets}
               columns={isMobile ? mobileColumns : columns}
               checkboxSelection
-              onRowSelectionModelChange={(model) => {
-                setRowSelectionModel(model);
+              getRowId={(row) => row.id}
+              disableRowSelectionOnClick
+              rowSelectionModel={rowSelectionModel}
+              sx={{
+                "& .MuiDataGrid-columnHeaderCheckbox .MuiDataGrid-columnHeaderTitleContainer":
+                  {
+                    display: "none",
+                  },
               }}
-              onRowClick={(p) => setSelectedSheet(p.row)}
+              onRowSelectionModelChange={(model) => setRowSelectionModel(model)}
               localeText={dataGridLocaleDE}
               pageSizeOptions={isMobile ? [5] : [10, 25, 100]}
             />
@@ -624,6 +675,12 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
           </Button>
         </DialogActions>
       </Dialog>
+      <Error
+        message={errorMessage}
+        open={errorOpen}
+        setOpen={setErrorOpen}
+        setErrorMessage={setErrorMessage}
+      />
     </Box>
   );
 }

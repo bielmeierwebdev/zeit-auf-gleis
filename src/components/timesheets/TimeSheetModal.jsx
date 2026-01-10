@@ -48,22 +48,43 @@ export default function TimeSheetModal({
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(true);
   const [entries, setEntries] = useState([]);
- const [activeCoWorker, setActiveCoWorker] = useState(null);
+  const [activeCoWorker, setActiveCoWorker] = useState(null);
 
   const [openTimeSheet, setOpenTimeSheet] = useState(false);
 
- useEffect(() => {
-  if (!open) return;
+  const [validationErrors, setValidationErrors] = useState({});
 
-  if (initialCoWorker) {
-    setActiveCoWorker(initialCoWorker);
-    setOpenTimeSheet(true); // direkt ins Stundenzettel-Modal
-  } else {
-    setActiveCoWorker(null); // Kalender-Fall
-    setOpenTimeSheet(false);
-  }
-}, [initialCoWorker, open]);
+  const checkValidation = () => {
+    const errors = {};
 
+    entries.forEach((e, index) => {
+      const rowErrors = {};
+
+      if (!e.location) rowErrors.location = true;
+      if (!e.startTime) rowErrors.startTime = true;
+      if (!e.endTime) rowErrors.endTime = true;
+
+      if (Object.keys(rowErrors).length > 0) {
+        errors[e.id] = rowErrors;
+      }
+    });
+
+    setValidationErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (initialCoWorker) {
+      setActiveCoWorker(initialCoWorker);
+      setOpenTimeSheet(true); // direkt ins Stundenzettel-Modal
+    } else {
+      setActiveCoWorker(null); // Kalender-Fall
+      setOpenTimeSheet(false);
+    }
+  }, [initialCoWorker, open]);
 
   useEffect(() => {
     if (!openTimeSheet || !date) return;
@@ -87,7 +108,6 @@ export default function TimeSheetModal({
         .eq("date", dateString)
         .eq("coworker_name", activeCoWorker)
         .maybeSingle();
-
 
       if (!timesheet) {
         // 🆕 neuer Stundenzettel
@@ -266,7 +286,12 @@ export default function TimeSheetModal({
   console.log(initialCoWorker);
   return (
     <>
-      <Dialog open={open && !initialCoWorker} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog
+        open={open && !initialCoWorker}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           <Typography fontWeight={600}>
             Stunden – {date.toLocaleDateString("de-DE")}
@@ -285,6 +310,11 @@ export default function TimeSheetModal({
             value={activeCoWorker}
             onChange={(e) => setActiveCoWorker(e.target.value)}
             fullWidth
+            required
+            error={!activeCoWorker}
+            helperText={
+              !activeCoWorker ? "Bitte einen Mitarbeiter auswählen" : ""
+            }
           >
             {coWorkerData.map((name) => (
               <MenuItem key={name} value={name}>
@@ -303,6 +333,7 @@ export default function TimeSheetModal({
               setOpenTimeSheet(true);
               onClose();
             }}
+            disabled={!activeCoWorker}
           >
             Weiter
           </Button>
@@ -354,6 +385,13 @@ export default function TimeSheetModal({
                         setEntries(c);
                       }}
                       disabled={!editMode}
+                      required
+                      error={!!validationErrors[e.id]?.location}
+                      helperText={
+                        validationErrors[e.id]?.location
+                          ? "Bitte einen Ort auswählen"
+                          : " "
+                      }
                     />
 
                     <Box display="flex" gap={2}>
@@ -367,6 +405,13 @@ export default function TimeSheetModal({
                           setEntries(c);
                         }}
                         disabled={!editMode}
+                        required
+                        error={!!validationErrors[e.id]?.startTime}
+                        helperText={
+                          validationErrors[e.id]?.startTime
+                            ? "Bitte eine Startzeit auswählen"
+                            : " "
+                        }
                       />
                       <TextField
                         label="Ende"
@@ -378,6 +423,13 @@ export default function TimeSheetModal({
                           setEntries(c);
                         }}
                         disabled={!editMode}
+                        required
+                        error={!!validationErrors[e.id]?.endTime}
+                        helperText={
+                          validationErrors[e.id]?.endTime
+                            ? "Bitte eine Endzeit auswählen"
+                            : " "
+                        }
                       />
                     </Box>
 
@@ -457,7 +509,15 @@ export default function TimeSheetModal({
         <DialogActions>
           <Button onClick={() => setOpenTimeSheet(false)}>Schließen</Button>
           {editMode && (
-            <Button variant="contained" color="success" onClick={handleSave}>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => {
+                const validate = checkValidation();
+                if (!validate) return;
+                handleSave();
+              }}
+            >
               Speichern
             </Button>
           )}
