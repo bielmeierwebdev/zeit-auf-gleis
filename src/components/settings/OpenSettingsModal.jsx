@@ -17,7 +17,7 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
 
   const [openPassword, setOpenPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  const [soll, setSoll] = useState("");
+  //const [soll, setSoll] = useState("");
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -37,7 +37,7 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
         .eq("id", user.id)
         .single();
 
-      setSoll(profile?.monthly_target_hours?.toString() || "160")
+      //setSoll(profile?.monthly_target_hours?.toString() || "160")
       setFirstName(profile?.first_name || "");
       setLastName(profile?.last_name || "");
     };
@@ -56,7 +56,7 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
         id: user.id,
         first_name: firstName,
         last_name: lastName,
-        monthly_target_hours: soll,
+        //monthly_target_hours: soll,
       });
 
     setLoading(false);
@@ -117,12 +117,13 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
               fullWidth
             />
 
-            <TextField
+{/**<TextField
               label="Soll Stunden"
               value={soll}
               onChange={(e) => setSoll(e.target.value)}
               fullWidth
-            />
+            /> */}
+            
 
             <Button variant="outlined" onClick={() => setOpenPassword(true)}>
               Passwort ändern

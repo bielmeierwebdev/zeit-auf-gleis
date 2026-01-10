@@ -30,29 +30,42 @@ function calcHours(start, end, pauseMinutes = 0) {
   let startMinutes = sh * 60 + sm;
   let endMinutes = eh * 60 + em;
 
-  // ⏭️ über Mitternacht
   if (endMinutes <= startMinutes) {
     endMinutes += 24 * 60;
   }
 
   const minutes = endMinutes - startMinutes - Number(pauseMinutes || 0);
-
   return Math.max(minutes / 60, 0);
 }
 
-export default function TimeSheetModal({ open, onClose, date, onSaved }) {
+export default function TimeSheetModal({
+  open,
+  onClose,
+  date,
+  onSaved,
+  initialCoWorker,
+}) {
   const [loading, setLoading] = useState(true);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(true);
   const [entries, setEntries] = useState([]);
-  const [activeCoWorker, setActiveCoWorker] = useState("Maria RZ");
+  const [activeCoWorker, setActiveCoWorker] = useState(
+    initialCoWorker || "Maria RZ"
+  );
   const [openTimeSheet, setOpenTimeSheet] = useState(false);
 
-  console.log(activeCoWorker);
   useEffect(() => {
-    if (!open || !date) return;
+    if (initialCoWorker) {
+      setActiveCoWorker(initialCoWorker);
+      setOpenTimeSheet(true); // direkt ins Stundenzettel-Modal
+    }
+  }, [initialCoWorker]);
+
+  useEffect(() => {
+    if (!openTimeSheet || !date) return;
 
     const load = async () => {
       setLoading(true);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -60,9 +73,7 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
 
       const dateString = date.toLocaleDateString("sv-SE");
 
-      console.log(dateString);
-
-      const { data: timesheet, error: timesheetError } = await supabase
+      const { data: timesheet } = await supabase
         .from("timesheets")
         .select("id")
         .eq("user_id", user.id)
@@ -70,17 +81,8 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         .eq("coworker_name", activeCoWorker)
         .maybeSingle();
 
-      const { data: test } = await supabase
-        .from("timesheets")
-        .select("id, user_id, coworker_name")
-        .eq("date", dateString);
-
-      // für dateString: 8.1.2025 bekomme ich als coworker_name Thaer RZ zurück, was richtig ist... wieso funktioniert die andere abrage nicht :(
-      console.log(test);
-
-      console.log(timesheetError);
-
       if (!timesheet) {
+        // 🆕 neuer Stundenzettel
         setEntries([
           {
             id: crypto.randomUUID(),
@@ -95,29 +97,29 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
           },
         ]);
         setEditMode(true);
-        return setLoading(false);
+        setLoading(false);
+        return;
       }
 
-      console.log(timesheet);
-
+      // 📄 vorhandener Stundenzettel → read-only
       const { data: entriesData } = await supabase
         .from("timesheet_entries")
         .select(
           `
-  id,
-  activity,
-  service,
-  number,
-  name,
-  location,
-  start_time,
-  end_time,
-  break_minutes
-`
+        id,
+        activity,
+        service,
+        number,
+        name,
+        location,
+        start_time,
+        end_time,
+        break_minutes
+      `
         )
-
         .eq("timesheet_id", timesheet.id)
         .order("start_time");
+
       setEntries(
         entriesData.map((e) => ({
           id: e.id,
@@ -132,12 +134,36 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         }))
       );
 
-      setEditMode(false);
+      setEditMode(false); // 🔒 schreibgeschützt
       setLoading(false);
     };
 
     load();
-  }, [open, date, activeCoWorker]);
+  }, [openTimeSheet, date, activeCoWorker]);
+
+  /*
+  useEffect(() => {
+    if (!open || !date) return;
+
+    setLoading(true);
+
+    setEntries([
+      {
+        id: crypto.randomUUID(),
+        activity: "",
+        service: "",
+        number: "",
+        name: "",
+        location: "Zwiesel",
+        startTime: "",
+        endTime: "",
+        breakMinutes: 0,
+      },
+    ]);
+
+    setEditMode(true);
+    setLoading(false);
+  }, [open, date, activeCoWorker]);*/
 
   if (!date) return null;
 
@@ -149,6 +175,7 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
   const handleSave = async () => {
     try {
       setLoading(true);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -168,19 +195,14 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
 
       const { data: timesheet } = await supabase
         .from("timesheets")
-        .upsert(
-          { user_id: user.id, date: dateString, total_hours: totalHours, coworker_name: activeCoWorker },
-          { onConflict: "user_id,date" }
-        )
+        .insert({
+          user_id: user.id,
+          date: dateString,
+          total_hours: totalHours,
+          coworker_name: activeCoWorker,
+        })
         .select()
         .single();
-
-      await supabase
-        .from("timesheet_entries")
-        .delete()
-        .eq("timesheet_id", timesheet.id);
-
-        console.log(entries);
 
       const preparedEntries = entries
         .filter((e) => e.startTime && e.endTime)
@@ -223,9 +245,8 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
         .update({ pdf_url: urlData.publicUrl })
         .eq("id", timesheet.id);
 
-      setEditMode(false);
       onSaved?.();
-      onClose();
+      setOpenTimeSheet(false);
     } catch (err) {
       console.error(err);
       alert("Fehler beim Speichern des Stundenzettels");
@@ -234,24 +255,22 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
     }
   };
 
-  function handleClose() {
-    setOpenTimeSheet(false);
-  }
-
+  console.log(initialCoWorker);
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
+      <Dialog open={open && !initialCoWorker} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>
           <Typography fontWeight={600}>
             Stunden – {date.toLocaleDateString("de-DE")}
           </Typography>
         </DialogTitle>
-        {console.log(coWorkerData)}
+
         <DialogContent dividers>
           <Typography mb={2}>
             Bitte wähle einen Mitarbeiter aus, für den ein Stundenzettel
             erstellt werden soll:
           </Typography>
+
           <TextField
             select
             label="Mitarbeiter"
@@ -266,33 +285,42 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
             ))}
           </TextField>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={onClose}>Abbrechen</Button>
-
           <Button
             variant="contained"
             color="success"
-            onClick={() => setOpenTimeSheet(true)}
+            onClick={() => {
+              setOpenTimeSheet(true);
+              onClose();
+            }}
           >
             Weiter
           </Button>
         </DialogActions>
       </Dialog>
+
       <Dialog
         open={openTimeSheet}
-        onClose={handleClose}
+        onClose={() => setOpenTimeSheet(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography fontWeight={600}>
-            Stunden – {date.toLocaleDateString("de-DE")}
-          </Typography>
-          {!editMode && (
-            <IconButton onClick={() => setEditMode(true)}>
-              <EditIcon />
-            </IconButton>
-          )}
+        <DialogTitle>
+          <DialogTitle
+            sx={{ display: "flex", justifyContent: "space-between" }}
+          >
+            <Typography fontWeight={600}>
+              Stunden – {date.toLocaleDateString("de-DE")}
+            </Typography>
+
+            {!editMode && (
+              <IconButton onClick={() => setEditMode(true)}>
+                <EditIcon />
+              </IconButton>
+            )}
+          </DialogTitle>
         </DialogTitle>
 
         <DialogContent dividers>
@@ -300,19 +328,7 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
             <Typography>Lade…</Typography>
           ) : (
             <Stack spacing={3}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: 5,
-                  p: 2,
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <Typography fontWeight={600}>Aktiver Mitarbeiter:</Typography>
-                <Typography>{activeCoWorker}</Typography>
-              </Box>
-
+              <Typography>{activeCoWorker}</Typography>
               {entries.map((e, i) => (
                 <Box
                   key={e.id}
@@ -322,70 +338,61 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
                 >
                   <Stack spacing={2}>
                     <TextField
-                      select
                       label="Ort"
                       value={e.location}
-                      defaultValue="Zwiesel"
-                      disabled={!editMode}
                       onChange={(ev) => {
                         const c = [...entries];
                         c[i].location = ev.target.value;
                         setEntries(c);
                       }}
-                    >
-                      <MenuItem value="Zwiesel">Zwiesel</MenuItem>
-                      <MenuItem value="Viechtach">Viechtach</MenuItem>
-                    </TextField>
+                      disabled={!editMode}
+                    />
 
-                    <Box
-                      display="flex"
-                      gap={2}
-                      flexDirection={{ xs: "column", md: "row" }}
-                    >
+                    <Box display="flex" gap={2}>
                       <TextField
                         label="Start"
                         type="time"
                         value={e.startTime}
-                        disabled={!editMode}
                         onChange={(ev) => {
                           const c = [...entries];
                           c[i].startTime = ev.target.value;
                           setEntries(c);
                         }}
+                        disabled={!editMode}
                       />
                       <TextField
                         label="Ende"
                         type="time"
                         value={e.endTime}
-                        disabled={!editMode}
                         onChange={(ev) => {
                           const c = [...entries];
                           c[i].endTime = ev.target.value;
                           setEntries(c);
                         }}
+                        disabled={!editMode}
                       />
                     </Box>
 
                     <TextField
                       label="Leistung"
                       value={e.service}
-                      disabled={!editMode}
                       onChange={(ev) => {
                         const c = [...entries];
                         c[i].service = ev.target.value;
                         setEntries(c);
                       }}
+                      disabled={!editMode}
                     />
 
                     <TextField
                       label="Nummer"
                       value={e.number}
-                      disabled={!editMode}
                       onChange={(ev) => {
                         const c = [...entries];
                         c[i].number = ev.target.value;
                         setEntries(c);
                       }}
+                      disabled={!editMode}
                     />
 
                     <Box display="flex" justifyContent="space-between">
@@ -431,14 +438,16 @@ export default function TimeSheetModal({ open, onClose, date, onSaved }) {
               )}
 
               <Divider />
+
               <Typography fontWeight={600}>
                 Gesamt: {totalHours.toFixed(2)} Stunden
               </Typography>
             </Stack>
           )}
         </DialogContent>
+
         <DialogActions>
-          <Button onClick={handleClose}>Schließen</Button>
+          <Button onClick={() => setOpenTimeSheet(false)}>Schließen</Button>
           {editMode && (
             <Button variant="contained" color="success" onClick={handleSave}>
               Speichern

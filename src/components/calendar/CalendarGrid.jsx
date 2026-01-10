@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Paper, Button } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { coworkerColors } from "./coWorkerColors";
 
 const MONTHS = [
   "Januar",
@@ -34,6 +35,7 @@ export default function CalendarGrid({
   timesheetsByDate = {},
   onMonthChange,
 }) {
+  console.log(timesheetsByDate);
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
@@ -140,17 +142,20 @@ export default function CalendarGrid({
                 return <Box key={dayIndex} />;
               }
 
-              console.log(timesheetsByDate);
-
               const dateObj = new Date(year, month, dayNumber);
               const dateKey = dateObj.toLocaleDateString("sv-SE");
-              const hasEntry = Boolean(timesheetsByDate[dateKey]);
+
+              const sheetsForDay = timesheetsByDate[dateKey] || [];
+
+              const coworkersForDay = [
+                ...new Set(sheetsForDay.map((s) => s.coworker_name)),
+              ].filter(Boolean);
+
+              console.log(coworkersForDay);
 
               return (
                 <Button
-                  key={dayIndex}
-                  variant={hasEntry ? "contained" : "outlined"}
-                  color={hasEntry ? "success" : "inherit"}
+                  color="inherit"
                   sx={{
                     aspectRatio: "1 / 1",
                     width: "100%",
@@ -158,13 +163,40 @@ export default function CalendarGrid({
                     borderRadius: 3,
                     fontSize: 14,
                     fontWeight: 500,
-                    ...(hasEntry && {
-                      boxShadow: "0 0 0 2px rgba(34,197,94,0.3)",
-                    }),
+                    p: 0.5,
                   }}
-                  onClick={() => onSelectDate(dateObj)}
                 >
-                  {dayNumber}
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    onClick={() => onSelectDate(dateObj)}
+                  >
+                    <Typography fontSize={14} fontWeight={600}>
+                      {dayNumber}
+                    </Typography>
+
+                    {coworkersForDay.length > 0 && (
+                      <Box
+                        display="flex"
+                        justifyContent="center"
+                        gap={0.5}
+                        mt={0.5}
+                      >
+                        {coworkersForDay.map((name) => (
+                          <Box
+                            key={name}
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              backgroundColor: coworkerColors[name],
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
                 </Button>
               );
             })}
