@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { getUser } from "../../db/getUser.js";
 import { loadProfile } from "../../db/loadProfile";
 import { updateProfile } from "../../db/updateProfile";
-import { setNewPasswordDB } from "../../db/setNewPassword";
+import { setNewPassword as  setNewPasswordDB } from "../../db/setNewPassword";
 
 export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
   const [user, setUser] = useState(null);
