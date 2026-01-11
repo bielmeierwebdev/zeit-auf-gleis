@@ -333,6 +333,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
     {
       field: "actions",
       headerName: "Aktionen",
+      flex: 0.5,
       renderCell: (p) => (
         <>
           <IconButton
@@ -615,6 +616,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
           <Typography variant="h6" mb={2}>
             Vorschau
           </Typography>
+          {console.log(selectedSheet)}
 
           {selectedSheet?.pdf_url ? (
             <Box

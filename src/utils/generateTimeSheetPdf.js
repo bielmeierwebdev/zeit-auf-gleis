@@ -49,7 +49,7 @@ export async function generateTimeSheetPdf({
   entries,
   totalHours,
 }) {
-  console.log(entries);
+
   const pdfDoc = await PDFDocument.create();
   let page = pdfDoc.addPage([595, 842]); // A4
 
@@ -181,58 +181,6 @@ export async function generateTimeSheetPdf({
   }
 
   y -= 8;
-  page.drawLine({
-    start: { x: 40, y },
-    end: { x: width - 40, y },
-    thickness: 1,
-    color: rgb(0.8, 0.8, 0.8),
-  });
-
-  y -= 14;
-
-  /* EINTRÄGE */
-  for (const entry of entries) {
-    let maxRowHeight = 0;
-
-    page.drawText(new Date(date).toLocaleDateString("de-DE"), {
-      x: colX[0],
-      y,
-      size: 9,
-      font,
-    });
-
-    page.drawText(entry.location ?? "", { x: colX[1], y, size: 9, font });
-    page.drawText(entry.start_time ?? "", { x: colX[2], y, size: 9, font });
-    page.drawText(entry.end_time ?? "", { x: colX[3], y, size: 9, font });
-    page.drawText(entry.hours ? String(entry.hours) : "", {
-      x: colX[4],
-      y,
-      size: 9,
-      font,
-    });
-    page.drawText(entry.service ?? "", { x: colX[5], y, size: 9, font });
-
-    const numberHeight = drawWrappedText({
-      page,
-      text: entry.number ?? "",
-      x: colX[6],
-      y,
-      maxWidth: colWidth[6],
-      font,
-      size: 9,
-    });
-
-    maxRowHeight = Math.max(14, numberHeight || 0);
-
-    y -= maxRowHeight + 2;
-
-    if (y < 80) {
-      page = pdfDoc.addPage([595, 842]);
-      y = height - 60;
-    }
-  }
-
-  y -= 12;
   page.drawLine({
     start: { x: 40, y },
     end: { x: width - 40, y },

@@ -211,17 +211,7 @@ export default function TimeSheetModal({
 
       const dateString = date.toLocaleDateString("sv-SE");
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", user.id)
-        .single();
-
-      const userName = `${profile?.first_name || ""} ${
-        profile?.last_name || ""
-      }`.trim();
-
-      const { data: timesheet } = await supabase
+      const { data: timesheet, error: timesheetError } = await supabase
         .from("timesheets")
         .insert({
           user_id: user.id,
@@ -231,6 +221,8 @@ export default function TimeSheetModal({
         })
         .select()
         .single();
+
+      console.error(timesheetError);
 
       const preparedEntries = entries
         .filter((e) => e.startTime && e.endTime)
@@ -253,20 +245,25 @@ export default function TimeSheetModal({
         date,
         activeCoWorker,
         totalHours,
-        userName,
         entries: preparedEntries,
       });
 
+      console.log(pdfBytes);
       const filePath = `${user.id}/${timesheet.id}.pdf`;
+
+      console.log(filePath);
 
       await supabase.storage.from("timesheets").upload(filePath, pdfBytes, {
         contentType: "application/pdf",
         upsert: true,
       });
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData, error: urlError } = supabase.storage
         .from("timesheets")
         .getPublicUrl(filePath);
+
+        console.error(urlError);
+      console.log(urlData);
 
       await supabase
         .from("timesheets")
@@ -283,7 +280,6 @@ export default function TimeSheetModal({
     }
   };
 
-  console.log(initialCoWorker);
   return (
     <>
       <Dialog
