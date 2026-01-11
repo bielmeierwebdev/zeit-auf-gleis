@@ -33,7 +33,7 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
       setUser(user);
 
       // Profil laden
-      const profile = await loadProfile(user.id);
+      const profile = await loadProfile(user.user.id);
 
       setFirstName(profile?.first_name || "");
       setLastName(profile?.last_name || "");
