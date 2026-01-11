@@ -502,6 +502,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
               rows={filteredTimeSheets}
               columns={isMobile ? mobileColumns : columns}
               checkboxSelection
+              onRowClick={(p) => setSelectedSheet(p.row)}
               getRowId={(row) => row.id}
               disableRowSelectionOnClick
               rowSelectionModel={rowSelectionModel}
