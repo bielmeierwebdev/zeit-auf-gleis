@@ -1,6 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
+import { MONTHS } from "../calendar/monthList";
 
-function CurrentPeriod({ monthStatusByWorker, hasMonthSheets, now }) {
+function CurrentPeriod({ monthStatusByWorker, hasMonthSheets, month, year }) {
   
     return (
     <Paper sx={{ p: 3 }}>
@@ -9,11 +10,7 @@ function CurrentPeriod({ monthStatusByWorker, hasMonthSheets, now }) {
       </Typography>
 
       <Typography variant="h6" sx={{ mt: 0.5 }}>
-        📅{" "}
-        {now.toLocaleDateString("de-DE", {
-          month: "long",
-          year: "numeric",
-        })}
+        📅{" "}{MONTHS[month]}{" "}{year}
       </Typography>
 
       <Typography

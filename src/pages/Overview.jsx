@@ -37,14 +37,17 @@ export default function Overview() {
      AKTUELLER MONAT
   =============================== */
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  //const currentMonth = now.getMonth();
+  //const currentYear = now.getFullYear();
+
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const monthSheetsArray = Object.values(monthSheets).flat();
 
   const monthSheetsThisMonth = monthSheetsArray.filter((s) => {
     const d = new Date(s.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
   });
 
   const monthStatusByWorker = coWorkerData.map((name) => ({
@@ -85,13 +88,19 @@ export default function Overview() {
           <CalendarGrid
             onSelectDate={(d) => openForDate(d)}
             timesheetsByDate={monthSheets}
-            onMonthChange={loadMonthSheets}
+            //onMonthChange={loadMonthSheets}
+            onMonthChange={(year, month) => {
+              setSelectedYear(year);
+              setSelectedMonth(month);
+              loadMonthSheets(year, month);
+            }}
             today={now}
           />
           <CurrentPeriod
             monthStatusByWorker={monthStatusByWorker}
             hasMonthSheets={hasMonthSheets}
-            now={now}
+            month={selectedMonth}
+            year={selectedYear}
           />
         </Box>
 
