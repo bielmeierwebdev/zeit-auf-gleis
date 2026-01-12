@@ -72,7 +72,7 @@ export default function Login() {
           maxWidth: 420,
           p: { xs: 3, sm: 5 }, // ✅ weniger Padding auf Mobile
           borderRadius: 3,
-          backgroundColor: "rgba(255,255,255,0.92)",
+          backgroundColor: "background.paper",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -91,7 +91,7 @@ export default function Login() {
             />
           </Box>
 
-          <Typography variant="h5" fontWeight={600} mt={1}>
+          <Typography color="primary.text" variant="h5" fontWeight={600} mt={1}>
             Einloggen
           </Typography>
         </Box>

@@ -57,7 +57,7 @@ export default function TimeSheetModal({
   const checkValidation = () => {
     const errors = {};
 
-    entries.forEach((e, index) => {
+    entries.forEach((e) => {
       const rowErrors = {};
 
       if (!e.location) rowErrors.location = true;
