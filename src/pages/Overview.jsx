@@ -19,6 +19,7 @@ import { coWorkerData } from "../components/timesheets/coWorkerSelect";
 
 // db
 import { logout } from "../db/logout";
+import { getUser } from "../db/getUser.js";
 
 export default function Overview() {
   const theme = useTheme();
@@ -32,6 +33,25 @@ export default function Overview() {
   const [reloadKey, setReloadKey] = useState(0);
   const reloadAll = () => setReloadKey((k) => k + 1);
   const { monthSheets, loadMonthSheets } = useMonthSheets();
+
+  const [user, setUser] = useState(null); // currentUser logged in
+
+  useEffect(() => {
+  
+      async function load() {
+        // Nutzer laden
+        console.log("ich bin hier");
+        const user = await getUser();
+        if (!user) return;
+  
+        console.log(user);
+  
+        setUser(user);
+  
+      }
+  
+      load();
+    }, []);
 
   /* ===============================
      AKTUELLER MONAT
@@ -119,6 +139,7 @@ export default function Overview() {
       <OpenSettingsModal
         settingsOpen={settingsOpen}
         setSettingsOpen={setSettingsOpen}
+        currentUser={user}
       />
 
       <TimeSheetModal

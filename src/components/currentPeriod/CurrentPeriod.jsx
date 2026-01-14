@@ -3,20 +3,30 @@ import { MONTHS } from "../calendar/monthList";
 import { coworkerColors } from "../calendar/coWorkerColors";
 import { supabase } from "../../lib/supabase";
 import React from "react";
+import { getUser } from "../../db/getUser";
 
-function CurrentPeriod({ reloadKey, monthStatusByWorker, hasMonthSheets, month, year }) {
+function CurrentPeriod({
+  reloadKey,
+  monthStatusByWorker,
+  hasMonthSheets,
+  month,
+  year
+}) {
   const [lastTimesheet, setLastTimesheet] = React.useState([]);
   const [lastStundenblatt, setLastStundenblatt] = React.useState([]);
 
   async function getLastTimeSheet() {
+    const user = await getUser();
+    if (!user) return;
+
     const { data: lastTimesheet } = await supabase
       .from("timesheets")
       .select("id, date, coworker_name, total_hours, created_at")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    console.log(lastTimesheet);
     setLastTimesheet(lastTimesheet);
   }
 
@@ -29,7 +39,6 @@ function CurrentPeriod({ reloadKey, monthStatusByWorker, hasMonthSheets, month, 
       .maybeSingle();
 
     if (sbError) console.error(sbError);
-    console.log(lastSheet);
 
     setLastStundenblatt(lastSheet);
   }
@@ -96,13 +105,17 @@ function CurrentPeriod({ reloadKey, monthStatusByWorker, hasMonthSheets, month, 
           <Typography fontSize={16} fontWeight={500}>
             Stundenzettel
           </Typography>
-          <Typography fontSize={16} color="text.secondary">
-            {lastTimesheet
-              ? `${new Date(lastTimesheet.date).toLocaleDateString(
-                  "de-DE"
-                )} · ${lastTimesheet.coworker_name}`
-              : "–"}
-          </Typography>
+          {lastTimesheet ? (
+            <Typography fontSize={16} color="text.secondary">
+              {`${new Date(lastTimesheet.date).toLocaleDateString("de-DE")} · ${
+                lastTimesheet.coworker_name
+              }`}
+            </Typography>
+          ) : (
+            <Typography fontSize={16} color="text.secondary">
+              Noch nicht erstellt
+            </Typography>
+          )}
         </Box>
 
         {/* Stundenblatt */}
@@ -111,17 +124,21 @@ function CurrentPeriod({ reloadKey, monthStatusByWorker, hasMonthSheets, month, 
           <Typography fontSize={16} fontWeight={500}>
             Stundenblatt
           </Typography>
-          <Typography fontSize={16} color="text.secondary">
-            {lastStundenblatt
-              ? `${new Date(lastStundenblatt.from_date).toLocaleDateString(
-                  "de-DE",
-                  {
-                    month: "long",
-                    year: "numeric",
-                  }
-                )} · ${lastStundenblatt.coworker_name}`
-              : "–"}
-          </Typography>
+          {lastStundenblatt ? (
+            <Typography fontSize={16} color="text.secondary">
+              {`${new Date(lastStundenblatt.from_date).toLocaleDateString(
+                "de-DE",
+                {
+                  month: "long",
+                  year: "numeric",
+                }
+              )} · ${lastStundenblatt.coworker_name}`}
+            </Typography>
+          ) : (
+            <Typography fontSize={16} color="text.secondary">
+              Noch nicht erstellt
+            </Typography>
+          )}
         </Box>
       </Box>
     </Paper>

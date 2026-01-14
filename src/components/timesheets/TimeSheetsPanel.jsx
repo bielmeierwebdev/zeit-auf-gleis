@@ -65,9 +65,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [showStundenblatt, setShowStundenblatt] = useState(true);
 
   async function handleCreateStundenblatt() {
-    console.log(filteredTimeSheets);
-    console.log(rowSelectionModel);
-
     const selectedIds = Array.from(rowSelectionModel.ids ?? []);
 
     const selectedSheets = filteredTimeSheets.filter((s) =>
@@ -130,7 +127,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
       .from("stundenblaetter")
       .getPublicUrl(filePath);
 
-    console.log(userId);
     await supabase.from("stundenblaetter").insert({
       user_id: userId,
       coworker_name: coworkerName,
@@ -142,10 +138,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
     onReload?.();
   }
-
-  useEffect(() => {
-    console.log("Row Selection Model:", rowSelectionModel);
-  }, [rowSelectionModel]);
 
   /* ===============================
      AUTH / USER
@@ -242,8 +234,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
     return true;
   });
-
-  console.log("Filtered Time Sheets:", filteredTimeSheets);
 
   const filteredStundenblaetter = stundenblaetter.filter((sheet) => {
     if (nameFilterStundenblaetter !== "all") {
@@ -485,7 +475,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                       Stundenblatt erstellen
                     </Button>
                     <Tooltip title="Tabelle ausblenden">
-                      <Switch checked={showTimesheet} onChange={(e) => handleShowTimeSheet(e)} />
+                      <Switch
+                        checked={showTimesheet}
+                        onChange={(e) => handleShowTimeSheet(e)}
+                      />
                     </Tooltip>
                   </>
                 )}
@@ -556,7 +549,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             <Typography variant="h6">Stundenblätter</Typography>
 
             <Tooltip title="Tabelle ausblenden">
-              <Switch checked={showStundenblatt} onChange={handleShowStundenblatt} />
+              <Switch
+                checked={showStundenblatt}
+                onChange={handleShowStundenblatt}
+              />
             </Tooltip>
           </Box>
 
@@ -649,7 +645,6 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
           <Typography variant="h6" mb={2}>
             Vorschau
           </Typography>
-          {console.log(selectedSheet)}
 
           {selectedSheet?.pdf_url ? (
             <Box
