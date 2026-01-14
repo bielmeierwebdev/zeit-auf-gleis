@@ -570,59 +570,55 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
 
               {/* TABLE */}
               <Box sx={{ flex: 1, overflow: "auto" }}>
-                {stundenblaetter.length > 0 ? (
-                  <DataGrid
-                    rows={filteredStundenblaetter}
-                    onRowClick={(p) => setSelectedSheet(p.row)}
-                    columns={[
-                      {
-                        field: "from_date",
-                        headerName: "Zeitraum",
-                        flex: 1,
-                        valueFormatter: (v) =>
-                          v
-                            ? new Date(v).toLocaleDateString("de-DE", {
-                                month: "long",
-                                year: "numeric",
-                              })
-                            : "",
-                      },
-                      { field: "coworker_name", headerName: "Name", flex: 1 },
-                      {
-                        field: "total_hours",
-                        headerName: "Stunden",
-                        flex: 1,
-                        valueFormatter: (v) => `${v.toFixed(2)} h`,
-                      },
-                      {
-                        field: "actions",
-                        headerName: "PDF",
-                        renderCell: (p) => (
-                          <>
-                            <IconButton
-                              onClick={() => window.open(p.row.pdf_url)}
-                            >
-                              <DownloadIcon />
-                            </IconButton>
-                            <IconButton
-                              color="error"
-                              onClick={() => {
-                                setActiveSheet(p.row);
-                                setDeleteType("stundenblatt");
-                                setOpenDelete(true);
-                              }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </>
-                        ),
-                      },
-                    ]}
-                    localeText={dataGridLocaleDE}
-                  />
-                ) : (
-                  <Typography>Keine Stundenblätter vorhanden</Typography>
-                )}
+                <DataGrid
+                  rows={filteredStundenblaetter}
+                  onRowClick={(p) => setSelectedSheet(p.row)}
+                  columns={[
+                    {
+                      field: "from_date",
+                      headerName: "Zeitraum",
+                      flex: 1,
+                      valueFormatter: (v) =>
+                        v
+                          ? new Date(v).toLocaleDateString("de-DE", {
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "",
+                    },
+                    { field: "coworker_name", headerName: "Name", flex: 1 },
+                    {
+                      field: "total_hours",
+                      headerName: "Stunden",
+                      flex: 1,
+                      valueFormatter: (v) => `${v.toFixed(2)} h`,
+                    },
+                    {
+                      field: "actions",
+                      headerName: "PDF",
+                      renderCell: (p) => (
+                        <>
+                          <IconButton
+                            onClick={() => window.open(p.row.pdf_url)}
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => {
+                              setActiveSheet(p.row);
+                              setDeleteType("stundenblatt");
+                              setOpenDelete(true);
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      ),
+                    },
+                  ]}
+                  localeText={dataGridLocaleDE}
+                />
               </Box>
             </>
           )}
