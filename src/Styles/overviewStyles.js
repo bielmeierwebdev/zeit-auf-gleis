@@ -20,8 +20,8 @@ export const leftPanel = {
   display: "flex",
   flexDirection: "column",
   gap: 3,
-  height: "100%",     // 🔑 entscheidend
-  minHeight: 0,       // 🔑 extrem wichtig
+  height: { xs: "auto", md: "100%" }, // 👈 wichtig
+  minHeight: 0,
 };
 
 export const rightPanel = {
