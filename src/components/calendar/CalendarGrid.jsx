@@ -53,7 +53,7 @@ export default function CalendarGrid({
   }
 
   return (
-    <Paper sx={{ p: 3, width: "100%" }}>
+    <Paper sx={{ p: 3, width: "100%", flex: 1 }}>
       {/* HEADER */}
       <Box sx={calendarStyles.box}>
         <IconButton onClick={goPrevMonth}>

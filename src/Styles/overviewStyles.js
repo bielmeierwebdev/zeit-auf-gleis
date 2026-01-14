@@ -9,7 +9,7 @@ export const mainBox = {
   flex: 1,
   display: "flex",
   flexDirection: { xs: "column", md: "row" },
-  gap: 4,
+  gap: 3,
   p: { xs: 2, md: 3 },
   overflow: { xs: "visible", md: "hidden" },
 };
@@ -19,8 +19,9 @@ export const leftPanel = {
   minWidth: { md: 420 },
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-  overflow: "auto",
+  gap: 3,
+  height: "100%",     // 🔑 entscheidend
+  minHeight: 0,       // 🔑 extrem wichtig
 };
 
 export const rightPanel = {

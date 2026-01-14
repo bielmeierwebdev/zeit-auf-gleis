@@ -40,7 +40,7 @@ function CurrentPeriod({ reloadKey, monthStatusByWorker, hasMonthSheets, month, 
   }, [reloadKey]);
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper sx={{ p: 3, flex: 1 }}>
       <Typography variant="subtitle2" color="text.secondary">
         Aktueller Zeitraum
       </Typography>
