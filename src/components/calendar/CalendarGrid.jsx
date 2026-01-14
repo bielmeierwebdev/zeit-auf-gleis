@@ -118,10 +118,9 @@ export default function CalendarGrid({
               ].filter(Boolean);
 
               return (
-                <Button color="inherit" sx={calendarStyles.day}>
+                <Button color="inherit" sx={calendarStyles.day} onClick={() => onSelectDate(dateObj)}>
                   <Box
                     sx={calendarStyles.dayBox}
-                    onClick={() => onSelectDate(dateObj)}
                   >
                     <Typography fontSize={14} fontWeight={600}>
                       {dayNumber}
