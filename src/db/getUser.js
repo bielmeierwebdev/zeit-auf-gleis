@@ -1,7 +1,14 @@
 import { supabase } from "../lib/supabase";
 
-export function getUser() {
-  const user = supabase.auth.user();
+export async function getUser() {
+  const { data, error } = await supabase.auth.getUser();
 
-  return user;
+  console.log(data);
+
+  if (error) {
+    console.error(error);
+    return null;
+  }
+
+  return data.user;
 }

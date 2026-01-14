@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { getUser } from "../../db/getUser.js";
 import { loadProfile } from "../../db/loadProfile";
 import { updateProfile } from "../../db/updateProfile";
-import { setNewPassword as  setNewPasswordDB } from "../../db/setNewPassword";
+import { setNewPassword as setNewPasswordDB } from "../../db/setNewPassword";
 
 export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
   const [user, setUser] = useState(null);
@@ -28,12 +28,18 @@ export function OpenSettingsModal({ settingsOpen, setSettingsOpen }) {
 
     async function load() {
       // Nutzer laden
+      console.log("ich bin hier");
       const user = await getUser();
       if (!user) return;
+
+      console.log(user);
+
       setUser(user);
 
       // Profil laden
-      const profile = await loadProfile(user.user.id);
+      const profile = await loadProfile(user.id);
+
+      console.log(profile);
 
       setFirstName(profile?.first_name || "");
       setLastName(profile?.last_name || "");
