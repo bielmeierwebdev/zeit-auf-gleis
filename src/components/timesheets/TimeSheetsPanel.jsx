@@ -485,7 +485,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                       Stundenblatt erstellen
                     </Button>
                     <Tooltip title="Tabelle ausblenden">
-                      <Switch onChange={(e) => handleShowTimeSheet(e)} />
+                      <Switch checked={showTimesheet} onChange={(e) => handleShowTimeSheet(e)} />
                     </Tooltip>
                   </>
                 )}
@@ -556,7 +556,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             <Typography variant="h6">Stundenblätter</Typography>
 
             <Tooltip title="Tabelle ausblenden">
-              <Switch onChange={handleShowStundenblatt} />
+              <Switch checked={showStundenblatt} onChange={handleShowStundenblatt} />
             </Tooltip>
           </Box>
 
