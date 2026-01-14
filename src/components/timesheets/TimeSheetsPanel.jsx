@@ -9,6 +9,7 @@ import {
   DialogActions,
   Button,
   Stack,
+  Switch,
 } from "@mui/material";
 import { supabase } from "../../lib/supabase";
 import EditIcon from "@mui/icons-material/Edit";
@@ -59,6 +60,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [errorOpen, setErrorOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // switches
+  const [showTimesheet, setShowTimesheet] = useState(true);
+  const [showStundenblatt, setShowStundenblatt] = useState(true);
+
   async function handleCreateStundenblatt() {
     console.log(filteredTimeSheets);
     console.log(rowSelectionModel);
@@ -82,7 +87,9 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
     // Verwendung
     if (hasDifferentCoworkers(selectedSheets)) {
       setErrorOpen(true);
-      setErrorMessage("Bitte nur Dateien mit dem gleichen Mitarbeiter auswählen.");
+      setErrorMessage(
+        "Bitte nur Dateien mit dem gleichen Mitarbeiter auswählen."
+      );
       return;
     }
 
@@ -400,6 +407,22 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
     },
   ];
 
+  function handleShowTimeSheet(event) {
+    setShowTimesheet(event.target.checked);
+  }
+
+  function handleShowStundenblatt(event) {
+    setShowStundenblatt(event.target.checked);
+  }
+
+  const panelSx = {
+    p: 3,
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+    flex: showTimesheet && showStundenblatt ? 1 : "1 1 auto",
+  };
+
   /* ===============================
      RENDER
   =============================== */
@@ -409,6 +432,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
       flexDirection={{ xs: "column", md: "row" }}
       gap={3}
       alignItems="stretch"
+      height="100%"
     >
       {/* TIMESHEETS */}
       <Box
@@ -418,17 +442,10 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
         flex={showPreview ? "1 1 0%" : "1 1 100%"}
         minWidth={0}
       >
-        <Paper
-          sx={{
-            p: 3,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            height: { xs: 520, md: 380 },
-          }}
-        >
+        {/* STUNDENZETTEL */}
+        <Paper sx={panelSx}>
           {/* HEADER */}
-          <Box mb={2}>
+          <Box mb={showTimesheet ? 2 : 0}>
             {/* Titel + Actions */}
             <Box
               display="flex"
@@ -467,6 +484,9 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                     >
                       Stundenblatt erstellen
                     </Button>
+                    <Tooltip title="Tabelle ausblenden">
+                      <Switch onChange={(e) => handleShowTimeSheet(e)} />
+                    </Tooltip>
                   </>
                 )}
 
@@ -488,115 +508,128 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
             </Box>
 
             {/* FILTER – IMMER UNTER TITEL */}
-            <Box>
-              <TableFilter
-                value={dateFilter}
-                onChange={setDateFilter}
-                nameFilter={nameFilter}
-                setNameFilter={setNameFilter}
+            {showTimesheet && (
+              <Box>
+                <TableFilter
+                  value={dateFilter}
+                  onChange={setDateFilter}
+                  nameFilter={nameFilter}
+                  setNameFilter={setNameFilter}
+                />
+              </Box>
+            )}
+          </Box>
+          {showTimesheet && (
+            <Box sx={{ flex: 1, overflow: "auto" }}>
+              <DataGrid
+                rows={filteredTimeSheets}
+                columns={isMobile ? mobileColumns : columns}
+                checkboxSelection
+                onRowClick={(p) => setSelectedSheet(p.row)}
+                getRowId={(row) => row.id}
+                disableRowSelectionOnClick
+                rowSelectionModel={rowSelectionModel}
+                sx={{
+                  "& .MuiDataGrid-columnHeaderCheckbox .MuiDataGrid-columnHeaderTitleContainer":
+                    {
+                      display: "none",
+                    },
+                }}
+                onRowSelectionModelChange={(model) =>
+                  setRowSelectionModel(model)
+                }
+                localeText={dataGridLocaleDE}
+                pageSizeOptions={isMobile ? [5] : [10, 25, 100]}
               />
             </Box>
-          </Box>
-          {}
-          <Box sx={{ flex: 1, overflow: "auto" }}>
-            <DataGrid
-              rows={filteredTimeSheets}
-              columns={isMobile ? mobileColumns : columns}
-              checkboxSelection
-              onRowClick={(p) => setSelectedSheet(p.row)}
-              getRowId={(row) => row.id}
-              disableRowSelectionOnClick
-              rowSelectionModel={rowSelectionModel}
-              sx={{
-                "& .MuiDataGrid-columnHeaderCheckbox .MuiDataGrid-columnHeaderTitleContainer":
-                  {
-                    display: "none",
-                  },
-              }}
-              onRowSelectionModelChange={(model) => setRowSelectionModel(model)}
-              localeText={dataGridLocaleDE}
-              pageSizeOptions={isMobile ? [5] : [10, 25, 100]}
-            />
-          </Box>
+          )}
         </Paper>
         {/* STUNDENBLÄTTER */}
-        <Paper
-          sx={{
-            p: 3,
-            display: "flex",
-            flexDirection: "column",
-            height: { xs: 520, md: 380 },
-          }}
-        >
+        <Paper sx={panelSx}>
           {/* HEADER: Titel */}
-          <Box mb={1.5}>
+          <Box
+            mb={1.5}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <Typography variant="h6">Stundenblätter</Typography>
+
+            <Tooltip title="Tabelle ausblenden">
+              <Switch onChange={handleShowStundenblatt} />
+            </Tooltip>
           </Box>
 
           {/* FILTER: immer volle Breite */}
-          <Box mb={2}>
-            <TableFilter
-              value={dateFilterStundenblaetter}
-              onChange={setDateFilterStundenblaetter}
-              nameFilter={nameFilterStundenblaetter}
-              setNameFilter={setNameFilterStundenblaetter}
-            />
-          </Box>
+          {showStundenblatt && (
+            <>
+              <Box mb={2}>
+                <TableFilter
+                  value={dateFilterStundenblaetter}
+                  onChange={setDateFilterStundenblaetter}
+                  nameFilter={nameFilterStundenblaetter}
+                  setNameFilter={setNameFilterStundenblaetter}
+                />
+              </Box>
 
-          {/* TABLE */}
-          <Box sx={{ flex: 1, overflow: "auto" }}>
-            {stundenblaetter.length > 0 ? (
-              <DataGrid
-                rows={filteredStundenblaetter}
-                onRowClick={(p) => setSelectedSheet(p.row)}
-                columns={[
-                  {
-                    field: "from_date",
-                    headerName: "Zeitraum",
-                    flex: 1,
-                    valueFormatter: (v) =>
-                      v
-                        ? new Date(v).toLocaleDateString("de-DE", {
-                            month: "long",
-                            year: "numeric",
-                          })
-                        : "",
-                  },
-                  { field: "coworker_name", headerName: "Name", flex: 1 },
-                  {
-                    field: "total_hours",
-                    headerName: "Stunden",
-                    flex: 1,
-                    valueFormatter: (v) => `${v.toFixed(2)} h`,
-                  },
-                  {
-                    field: "actions",
-                    headerName: "PDF",
-                    renderCell: (p) => (
-                      <>
-                        <IconButton onClick={() => window.open(p.row.pdf_url)}>
-                          <DownloadIcon />
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          onClick={() => {
-                            setActiveSheet(p.row);
-                            setDeleteType("stundenblatt");
-                            setOpenDelete(true);
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </>
-                    ),
-                  },
-                ]}
-                localeText={dataGridLocaleDE}
-              />
-            ) : (
-              <Typography>Keine Stundenblätter vorhanden</Typography>
-            )}
-          </Box>
+              {/* TABLE */}
+              <Box sx={{ flex: 1, overflow: "auto" }}>
+                {stundenblaetter.length > 0 ? (
+                  <DataGrid
+                    rows={filteredStundenblaetter}
+                    onRowClick={(p) => setSelectedSheet(p.row)}
+                    columns={[
+                      {
+                        field: "from_date",
+                        headerName: "Zeitraum",
+                        flex: 1,
+                        valueFormatter: (v) =>
+                          v
+                            ? new Date(v).toLocaleDateString("de-DE", {
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "",
+                      },
+                      { field: "coworker_name", headerName: "Name", flex: 1 },
+                      {
+                        field: "total_hours",
+                        headerName: "Stunden",
+                        flex: 1,
+                        valueFormatter: (v) => `${v.toFixed(2)} h`,
+                      },
+                      {
+                        field: "actions",
+                        headerName: "PDF",
+                        renderCell: (p) => (
+                          <>
+                            <IconButton
+                              onClick={() => window.open(p.row.pdf_url)}
+                            >
+                              <DownloadIcon />
+                            </IconButton>
+                            <IconButton
+                              color="error"
+                              onClick={() => {
+                                setActiveSheet(p.row);
+                                setDeleteType("stundenblatt");
+                                setOpenDelete(true);
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </>
+                        ),
+                      },
+                    ]}
+                    localeText={dataGridLocaleDE}
+                  />
+                ) : (
+                  <Typography>Keine Stundenblätter vorhanden</Typography>
+                )}
+              </Box>
+            </>
+          )}
         </Paper>
       </Box>
 

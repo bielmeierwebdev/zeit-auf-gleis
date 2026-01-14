@@ -101,6 +101,7 @@ export default function Overview() {
             hasMonthSheets={hasMonthSheets}
             month={selectedMonth}
             year={selectedYear}
+            reloadKey={reloadKey}
           />
         </Box>
 
