@@ -22,6 +22,11 @@ export const leftPanel = {
   gap: 3,
   height: { xs: "auto", md: "100%" }, // 👈 wichtig
   minHeight: 0,
+  overflow: "auto",
+  scrollbarWidth: "none", // Firefox
+  "&::-webkit-scrollbar": {
+    display: "none", // Chrome / Edge / Safari
+  },
 };
 
 export const rightPanel = {

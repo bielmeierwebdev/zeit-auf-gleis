@@ -16,17 +16,20 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import IconButton from "@mui/material/IconButton";
+import SettingsIcon from "@mui/icons-material/Settings";
 import IconDelete from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import AddIcon from "@mui/icons-material/Add";
 import Tooltip from "@mui/material/Tooltip";
 import { DataGrid } from "@mui/x-data-grid";
 import { dataGridLocaleDE } from "./datagridLocaleDe";
 import TableFilter from "./TableFilter";
 import { generateStundenblattPdf } from "../../utils/generateStundenblattPdf";
 import { useTheme, useMediaQuery } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+
 import Error from "../../Error";
+import IconMenu from "./IconMenu";
 
 export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [userId, setUserId] = useState(null);
@@ -52,7 +55,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   const [nameFilterStundenblaetter, setNameFilterStundenblaetter] =
     useState("all");
 
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const [loading, setLoading] = useState(true);
 
   const [openDelete, setOpenDelete] = useState(false);
@@ -63,6 +66,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
   // switches
   const [showTimesheet, setShowTimesheet] = useState(true);
   const [showStundenblatt, setShowStundenblatt] = useState(true);
+  const [showFilter, setShowFilter] = useState(true);
 
   async function handleCreateStundenblatt() {
     const selectedIds = Array.from(rowSelectionModel.ids ?? []);
@@ -441,7 +445,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
               display="flex"
               alignItems="center"
               justifyContent="space-between"
-              mb={2}
+          
             >
               <Typography variant="h6">Alle Stundenzettel</Typography>
 
@@ -449,7 +453,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                 {/* Desktop Button */}
                 {!isMobile && (
                   <>
-                    <Button
+                    {/** <Button
                       variant="outlined"
                       onClick={() => {
                         const allIds = filteredTimeSheets.map((r) => r.id);
@@ -465,7 +469,7 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                       {rowSelectionModel.ids.size === filteredTimeSheets.length
                         ? "Auswahl löschen"
                         : "Alle auswählen"}
-                    </Button>
+                    </Button>*/}
 
                     <Button
                       variant="contained"
@@ -494,14 +498,25 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
                   </IconButton>
                 )}
 
+                {/**
                 <IconButton onClick={() => setShowPreview((p) => !p)}>
                   {showPreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                </IconButton>
+                </IconButton> */}
+
+                <IconMenu
+                  showPreview={showPreview}
+                  setShowPreview={setShowPreview}
+                  filteredTimeSheets={filteredTimeSheets}
+                  rowSelectionModel={rowSelectionModel}
+                  setRowSelectionModel={setRowSelectionModel}
+                  setShowFilter={setShowFilter}
+                  showFilter={showFilter}
+                />
               </Stack>
             </Box>
 
             {/* FILTER – IMMER UNTER TITEL */}
-            {showTimesheet && (
+            {showTimesheet && showFilter && (
               <Box>
                 <TableFilter
                   value={dateFilter}
@@ -559,14 +574,16 @@ export default function TimeSheetsPanel({ openForDate, reloadKey, onReload }) {
           {/* FILTER: immer volle Breite */}
           {showStundenblatt && (
             <>
-              <Box mb={2}>
-                <TableFilter
-                  value={dateFilterStundenblaetter}
-                  onChange={setDateFilterStundenblaetter}
-                  nameFilter={nameFilterStundenblaetter}
-                  setNameFilter={setNameFilterStundenblaetter}
-                />
-              </Box>
+              {showFilter && (
+                <Box mb={2}>
+                  <TableFilter
+                    value={dateFilterStundenblaetter}
+                    onChange={setDateFilterStundenblaetter}
+                    nameFilter={nameFilterStundenblaetter}
+                    setNameFilter={setNameFilterStundenblaetter}
+                  />
+                </Box>
+              )}
 
               {/* TABLE */}
               <Box sx={{ flex: 1, overflow: "auto" }}>
